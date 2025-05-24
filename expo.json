@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "tribly-app",
+    "slug": "tribly-app",
+    "platforms": ["ios", "android"],
+    "version": "1.0.0",
+    "devServer": {
+      "hostname": "0.0.0.0"
+    }
+  }
+}
