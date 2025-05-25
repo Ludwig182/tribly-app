@@ -1,9 +1,18 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+// app/(tabs)/shopping.tsx - Version interactive
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+interface ShoppingItem {
+  id: number;
+  item: string;
+  category: string;
+  addedBy: string;
+  checked: boolean;
+}
+
 export default function ShoppingScreen() {
-  const shoppingList = [
+  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([
     { id: 1, item: 'Lait', category: 'Frais', addedBy: 'Rosaly', checked: false },
     { id: 2, item: 'Pain complet', category: 'Boulangerie', addedBy: 'Ludwig', checked: true },
     { id: 3, item: 'Pommes', category: 'Fruits', addedBy: 'Clémentine', checked: false },
@@ -12,13 +21,51 @@ export default function ShoppingScreen() {
     { id: 6, item: 'Chocolat noir', category: 'Épicerie', addedBy: 'Clémentine', checked: false },
     { id: 7, item: 'Saumon', category: 'Poisson', addedBy: 'Ludwig', checked: false },
     { id: 8, item: 'Salade', category: 'Légumes', addedBy: 'Rosaly', checked: false },
-  ];
+  ]);
 
+  // 📊 Calculs dynamiques
   const uncheckedItems = shoppingList.filter(item => !item.checked);
   const checkedItems = shoppingList.filter(item => item.checked);
+  const totalItems = shoppingList.length;
+
+  // 🎯 Fonction pour toggle un article
+  const toggleItem = (itemId: number) => {
+    setShoppingList(prevList => 
+      prevList.map(item => 
+        item.id === itemId 
+          ? { ...item, checked: !item.checked }
+          : item
+      )
+    );
+
+    // Feedback léger (optionnel)
+    const item = shoppingList.find(i => i.id === itemId);
+    if (item && !item.checked) {
+      // On vient de cocher l'article
+      // On pourrait ajouter un petit feedback sonore ici
+    }
+  };
+
+  // 🔄 Fonction pour décocher tous les articles
+  const uncheckAll = () => {
+    Alert.alert(
+      '🛒 Vider le panier',
+      'Remettre tous les articles en "à acheter" ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Vider', 
+          style: 'destructive',
+          onPress: () => setShoppingList(prev => 
+            prev.map(item => ({ ...item, checked: false }))
+          )
+        }
+      ]
+    );
+  };
 
   const categories = ['Frais', 'Boulangerie', 'Fruits', 'Épicerie', 'Poisson', 'Légumes'];
-  const categoryColors = {
+  const categoryColors: { [key: string]: string[] } = {
     'Frais': ['#FF8A80', '#7986CB'],
     'Boulangerie': ['#FFCC80', '#A29BFE'],
     'Fruits': ['#48bb78', '#38a169'],
@@ -26,6 +73,38 @@ export default function ShoppingScreen() {
     'Poisson': ['#4299e1', '#667eea'],
     'Légumes': ['#48bb78', '#68d391'],
   };
+
+  // 📋 Composant pour afficher un article (éviter duplication)
+  const ShoppingItemComponent = ({ item }: { item: ShoppingItem }) => (
+    <TouchableOpacity 
+      key={item.id} 
+      style={[styles.itemCard, item.checked && styles.itemChecked]}
+      onPress={() => toggleItem(item.id)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.itemHeader}>
+        <View style={styles.checkbox}>
+          <Text style={item.checked ? styles.checkboxFilled : styles.checkboxEmpty}>
+            {item.checked ? '✓' : '○'}
+          </Text>
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
+            {item.item}
+          </Text>
+          <Text style={styles.itemMeta}>
+            Ajouté par {item.addedBy}
+          </Text>
+        </View>
+        <LinearGradient
+          colors={categoryColors[item.category] || ['#e2e8f0', '#cbd5e0']}
+          style={[styles.categoryBadge, item.checked && styles.categoryBadgeChecked]}
+        >
+          <Text style={styles.categoryText}>{item.category}</Text>
+        </LinearGradient>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,77 +116,74 @@ export default function ShoppingScreen() {
         end={{ x: 1, y: 1 }}
       >
         <Text style={styles.headerTitle}>🛒 Liste de Courses</Text>
-        <Text style={styles.headerSubtitle}>Famille Questroy • {uncheckedItems.length} articles restants</Text>
+        <Text style={styles.headerSubtitle}>
+          Famille Questroy • {uncheckedItems.length} articles restants
+        </Text>
       </LinearGradient>
 
       <ScrollView style={styles.content}>
-        {/* Stats rapides */}
+        {/* Stats rapides - Maintenant dynamiques */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{shoppingList.length}</Text>
+            <Text style={styles.statNumber}>{totalItems}</Text>
             <Text style={styles.statLabel}>Total articles</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{uncheckedItems.length}</Text>
+            <Text style={[styles.statNumber, { color: '#ed8936' }]}>{uncheckedItems.length}</Text>
             <Text style={styles.statLabel}>À acheter</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{checkedItems.length}</Text>
+            <Text style={[styles.statNumber, { color: '#48bb78' }]}>{checkedItems.length}</Text>
             <Text style={styles.statLabel}>Dans le panier</Text>
           </View>
+          {checkedItems.length > 0 && (
+            <TouchableOpacity style={styles.statCard} onPress={uncheckAll}>
+              <Text style={[styles.statNumber, { color: '#f56565' }]}>🗑️</Text>
+              <Text style={[styles.statLabel, { color: '#f56565' }]}>Vider</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Articles à acheter */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🛍️ À acheter</Text>
-          {uncheckedItems.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
-              <View style={styles.itemHeader}>
-                <TouchableOpacity style={styles.checkbox}>
-                  <Text style={styles.checkboxEmpty}>○</Text>
-                </TouchableOpacity>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.item}</Text>
-                  <Text style={styles.itemMeta}>
-                    Ajouté par {item.addedBy}
-                  </Text>
-                </View>
-                <LinearGradient
-                  colors={categoryColors[item.category] || ['#e2e8f0', '#cbd5e0']}
-                  style={styles.categoryBadge}
-                >
-                  <Text style={styles.categoryText}>{item.category}</Text>
-                </LinearGradient>
-              </View>
-            </View>
-          ))}
-        </View>
+        {uncheckedItems.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🛍️ À acheter ({uncheckedItems.length})</Text>
+            {uncheckedItems.map(item => (
+              <ShoppingItemComponent key={item.id} item={item} />
+            ))}
+          </View>
+        )}
 
         {/* Articles dans le panier */}
         {checkedItems.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>✅ Dans le panier</Text>
-            {checkedItems.map((item) => (
-              <View key={item.id} style={[styles.itemCard, styles.itemChecked]}>
-                <View style={styles.itemHeader}>
-                  <TouchableOpacity style={styles.checkbox}>
-                    <Text style={styles.checkboxFilled}>✓</Text>
-                  </TouchableOpacity>
-                  <View style={styles.itemInfo}>
-                    <Text style={[styles.itemName, styles.itemNameChecked]}>{item.item}</Text>
-                    <Text style={styles.itemMeta}>
-                      Ajouté par {item.addedBy}
-                    </Text>
-                  </View>
-                  <LinearGradient
-                    colors={categoryColors[item.category] || ['#e2e8f0', '#cbd5e0']}
-                    style={[styles.categoryBadge, styles.categoryBadgeChecked]}
-                  >
-                    <Text style={styles.categoryText}>{item.category}</Text>
-                  </LinearGradient>
-                </View>
-              </View>
+            <Text style={styles.sectionTitle}>✅ Dans le panier ({checkedItems.length})</Text>
+            {checkedItems.map(item => (
+              <ShoppingItemComponent key={item.id} item={item} />
             ))}
+          </View>
+        )}
+
+        {/* Message si liste vide */}
+        {totalItems === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🛒</Text>
+            <Text style={styles.emptyText}>Liste de courses vide</Text>
+            <Text style={styles.emptySubtext}>Ajoutez vos premiers articles !</Text>
+          </View>
+        )}
+
+        {/* Message si tout coché */}
+        {totalItems > 0 && uncheckedItems.length === 0 && (
+          <View style={styles.completedState}>
+            <Text style={styles.completedIcon}>🎉</Text>
+            <Text style={styles.completedText}>Courses terminées !</Text>
+            <Text style={styles.completedSubtext}>
+              Tous les articles sont dans le panier
+            </Text>
+            <TouchableOpacity style={styles.restartBtn} onPress={uncheckAll}>
+              <Text style={styles.restartText}>🔄 Recommencer les courses</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -186,7 +262,7 @@ const styles = StyleSheet.create({
   
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     marginBottom: 25,
   },
   
@@ -194,7 +270,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -204,16 +280,17 @@ const styles = StyleSheet.create({
   },
   
   statNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#FFCC80',
     marginBottom: 4,
   },
   
   statLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#4a5568',
     fontWeight: '500',
+    textAlign: 'center',
   },
   
   section: {
@@ -243,6 +320,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     borderWidth: 1,
     borderColor: '#48bb78',
+    backgroundColor: '#f0fff4',
   },
   
   itemHeader: {
@@ -266,6 +344,7 @@ const styles = StyleSheet.create({
   checkboxFilled: {
     fontSize: 18,
     color: '#48bb78',
+    fontWeight: '600',
   },
   
   itemInfo: {
@@ -303,6 +382,86 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: 'white',
+  },
+
+  // ✨ Nouveaux styles pour états spéciaux
+  emptyState: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 50,
+  },
+
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 15,
+  },
+
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 5,
+  },
+
+  emptySubtext: {
+    fontSize: 14,
+    color: '#4a5568',
+  },
+
+  completedState: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 25,
+    borderWidth: 2,
+    borderColor: '#48bb78',
+  },
+
+  completedIcon: {
+    fontSize: 48,
+    marginBottom: 15,
+  },
+
+  completedText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#48bb78',
+    marginBottom: 5,
+  },
+
+  completedSubtext: {
+    fontSize: 14,
+    color: '#4a5568',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+
+  restartBtn: {
+    backgroundColor: '#f7fafc',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+
+  restartText: {
+    fontSize: 14,
+    color: '#4a5568',
+    fontWeight: '500',
   },
   
   categoriesGrid: {
