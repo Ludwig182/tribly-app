@@ -1,7 +1,8 @@
 // app/(tabs)/shopping.tsx - Version interactive
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import FloatingActionButton from '../../src/components/common/FloatingActionButton';
 
 interface ShoppingItem {
   id: number;
@@ -22,6 +23,12 @@ export default function ShoppingScreen() {
     { id: 7, item: 'Saumon', category: 'Poisson', addedBy: 'Ludwig', checked: false },
     { id: 8, item: 'Salade', category: 'Légumes', addedBy: 'Rosaly', checked: false },
   ]);
+
+  // 📝 États pour le modal d'ajout
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Épicerie');
+  const [currentUser] = useState('Rosaly'); // Pour le moment, hardcodé
 
   // 📊 Calculs dynamiques
   const uncheckedItems = shoppingList.filter(item => !item.checked);
@@ -62,6 +69,62 @@ export default function ShoppingScreen() {
         }
       ]
     );
+  };
+
+  // 📝 Fonctions pour le modal d'ajout
+  const openModal = (category?: string) => {
+    if (category) {
+      setSelectedCategory(category);
+    }
+    setIsModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setNewItemName('');
+    setSelectedCategory('Épicerie');
+  };
+
+  const addNewItem = () => {
+    // Validation
+    if (!newItemName.trim()) {
+      Alert.alert('❌ Erreur', 'Veuillez saisir un nom d\'article');
+      return;
+    }
+
+    // Vérifier si l'article existe déjà
+    const exists = shoppingList.some(item => 
+      item.item.toLowerCase() === newItemName.trim().toLowerCase()
+    );
+
+    if (exists) {
+      Alert.alert('⚠️ Article existant', 'Cet article est déjà dans la liste');
+      return;
+    }
+
+    // Générer un nouvel ID
+    const newId = Math.max(...shoppingList.map(item => item.id)) + 1;
+
+    // Ajouter le nouvel article
+    const newItem: ShoppingItem = {
+      id: newId,
+      item: newItemName.trim(),
+      category: selectedCategory,
+      addedBy: currentUser,
+      checked: false
+    };
+
+    setShoppingList(prev => [...prev, newItem]);
+
+    // Feedback de succès
+    Alert.alert(
+      '✅ Article ajouté !', 
+      `"${newItemName}" a été ajouté à la liste`,
+      [{ text: 'Super !', style: 'default' }]
+    );
+
+    // Fermer le modal
+    closeModal();
   };
 
   const categories = ['Frais', 'Boulangerie', 'Fruits', 'Épicerie', 'Poisson', 'Légumes'];
@@ -192,7 +255,12 @@ export default function ShoppingScreen() {
           <Text style={styles.sectionTitle}>🏷️ Ajouter par catégorie</Text>
           <View style={styles.categoriesGrid}>
             {categories.map((category) => (
-              <TouchableOpacity key={category} style={styles.categoryCard}>
+              <TouchableOpacity 
+                key={category} 
+                style={styles.categoryCard}
+                onPress={() => openModal(category)}
+                activeOpacity={0.7}
+              >
                 <LinearGradient
                   colors={categoryColors[category]}
                   style={styles.categoryIcon}
@@ -211,19 +279,110 @@ export default function ShoppingScreen() {
           </View>
         </View>
 
-        {/* Bouton ajouter article */}
-        <TouchableOpacity style={styles.addItemBtn}>
-          <LinearGradient
-            colors={['#FFCC80', '#A29BFE']}
-            style={styles.addItemGradient}
-          >
-            <Text style={styles.addItemIcon}>+</Text>
-            <Text style={styles.addItemText}>Ajouter un article</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* 🚀 Bouton flottant d'ajout - Composant réutilisable */}
+      <FloatingActionButton
+        onPress={() => openModal()}
+        colors={['#FFCC80', '#A29BFE']} // Couleurs Shopping
+        icon="+"
+        shadowColor="#FFCC80"
+      />
+
+      {/* 📝 Modal d'ajout d'article */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeModal}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <SafeAreaView style={styles.modalContent}>
+            {/* Header du modal */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity 
+                style={styles.modalCloseBtn}
+                onPress={closeModal}
+              >
+                <Text style={styles.modalCloseText}>Annuler</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Ajouter un article</Text>
+              <TouchableOpacity 
+                style={[styles.modalSaveBtn, !newItemName.trim() && styles.modalSaveBtnDisabled]}
+                onPress={addNewItem}
+                disabled={!newItemName.trim()}
+              >
+                <Text style={[styles.modalSaveText, !newItemName.trim() && styles.modalSaveTextDisabled]}>
+                  Ajouter
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Champ nom de l'article */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>📝 Nom de l'article</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newItemName}
+                  onChangeText={setNewItemName}
+                  placeholder="Ex: Bananes, Fromage, Shampoing..."
+                  placeholderTextColor="#a0aec0"
+                  autoFocus={true}
+                  returnKeyType="next"
+                />
+              </View>
+
+              {/* Sélection catégorie */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>🏷️ Catégorie</Text>
+                <View style={styles.categorySelector}>
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category}
+                      style={[
+                        styles.categoryOption,
+                        selectedCategory === category && styles.categoryOptionSelected
+                      ]}
+                      onPress={() => setSelectedCategory(category)}
+                    >
+                      <LinearGradient
+                        colors={selectedCategory === category ? categoryColors[category] : ['#f7fafc', '#edf2f7']}
+                        style={styles.categoryOptionIcon}
+                      >
+                        <Text style={styles.categoryOptionEmoji}>
+                          {category === 'Frais' ? '🥛' : 
+                           category === 'Boulangerie' ? '🍞' :
+                           category === 'Fruits' ? '🍎' :
+                           category === 'Épicerie' ? '🥫' :
+                           category === 'Poisson' ? '🐟' : '🥬'}
+                        </Text>
+                      </LinearGradient>
+                      <Text style={[
+                        styles.categoryOptionText,
+                        selectedCategory === category && styles.categoryOptionTextSelected
+                      ]}>
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Info utilisateur */}
+              <View style={styles.infoSection}>
+                <Text style={styles.infoText}>
+                  👤 Ajouté par {currentUser}
+                </Text>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -503,33 +662,165 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
-  addItemBtn: {
-    marginTop: 10,
-    marginBottom: 20,
+  bottomSpacer: {
+    height: 50, // Réduit car plus de bouton dans le scroll
   },
-  
-  addItemGradient: {
+
+  // 📝 Styles pour le modal d'ajout
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+
+  modalContent: {
+    flex: 1,
+  },
+
+  modalHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 15,
-    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
-  
-  addItemIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
+
+  modalCloseBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+
+  modalCloseText: {
+    fontSize: 16,
+    color: '#f56565',
+    fontWeight: '500',
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+
+  modalSaveBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFCC80',
+    borderRadius: 20,
+  },
+
+  modalSaveBtnDisabled: {
+    backgroundColor: '#e2e8f0',
+  },
+
+  modalSaveText: {
+    fontSize: 16,
     color: 'white',
+    fontWeight: '600',
   },
-  
-  addItemText: {
+
+  modalSaveTextDisabled: {
+    color: '#a0aec0',
+  },
+
+  modalBody: {
+    flex: 1,
+    padding: 20,
+  },
+
+  inputSection: {
+    marginBottom: 30,
+  },
+
+  inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: '#2d3748',
+    marginBottom: 12,
   },
-  
-  bottomSpacer: {
-    height: 100,
+
+  textInput: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#2d3748',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  categorySelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+
+  categoryOption: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    width: '30%',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  categoryOptionSelected: {
+    borderColor: '#FFCC80',
+    borderWidth: 2,
+    shadowColor: '#FFCC80',
+    shadowOpacity: 0.2,
+  },
+
+  categoryOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  categoryOptionEmoji: {
+    fontSize: 20,
+  },
+
+  categoryOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#4a5568',
+    textAlign: 'center',
+  },
+
+  categoryOptionTextSelected: {
+    color: '#2d3748',
+    fontWeight: '600',
+  },
+
+  infoSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+
+  infoText: {
+    fontSize: 14,
+    color: '#4a5568',
+    textAlign: 'center',
   },
 });
