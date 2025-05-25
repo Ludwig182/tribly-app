@@ -1,4 +1,4 @@
-// app/(tabs)/shopping.tsx - Version interactive
+// app/(tabs)/shopping.tsx - Version avec catégories étendues
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,24 +16,84 @@ export default function ShoppingScreen() {
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([
     { id: 1, item: 'Lait', category: 'Frais', addedBy: 'Rosaly', checked: false },
     { id: 2, item: 'Pain complet', category: 'Boulangerie', addedBy: 'Ludwig', checked: true },
-    { id: 3, item: 'Pommes', category: 'Fruits', addedBy: 'Clémentine', checked: false },
+    { id: 3, item: 'Pommes', category: 'Fruits & Légumes', addedBy: 'Clémentine', checked: false },
     { id: 4, item: 'Pâtes', category: 'Épicerie', addedBy: 'Rosaly', checked: false },
     { id: 5, item: 'Yaourts', category: 'Frais', addedBy: 'Jacob', checked: true },
     { id: 6, item: 'Chocolat noir', category: 'Épicerie', addedBy: 'Clémentine', checked: false },
     { id: 7, item: 'Saumon', category: 'Poisson', addedBy: 'Ludwig', checked: false },
-    { id: 8, item: 'Salade', category: 'Légumes', addedBy: 'Rosaly', checked: false },
+    { id: 8, item: 'Salade', category: 'Fruits & Légumes', addedBy: 'Rosaly', checked: false },
   ]);
 
-  // 📝 États pour le modal d'ajout
+  // 📝 États pour les modaux
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAllCategoriesModalVisible, setIsAllCategoriesModalVisible] = useState(false);
+  const [isNewCategoryModalVisible, setIsNewCategoryModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Épicerie');
-  const [currentUser] = useState('Rosaly'); // Pour le moment, hardcodé
+  const [currentUser] = useState('Rosaly');
+
+  // États pour création de catégorie
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState('🏷️');
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
 
   // 📊 Calculs dynamiques
   const uncheckedItems = shoppingList.filter(item => !item.checked);
   const checkedItems = shoppingList.filter(item => item.checked);
   const totalItems = shoppingList.length;
+
+  // 🏷️ Catégories prédéfinies
+  const predefinedCategories = [
+    { name: 'Frais', emoji: '🥛', colors: ['#FF8A80', '#7986CB'], isDefault: true },
+    { name: 'Boulangerie', emoji: '🍞', colors: ['#FFCC80', '#A29BFE'], isDefault: true },
+    { name: 'Fruits & Légumes', emoji: '🍎', colors: ['#48bb78', '#38a169'], isDefault: true },
+    { name: 'Épicerie', emoji: '🥫', colors: ['#4299e1', '#667eea'], isDefault: true },
+    { name: 'Surgelés', emoji: '🧊', colors: ['#ed8936', '#dd6b20'], isDefault: true },
+    { name: 'Beauté & Soins', emoji: '🧴', colors: ['#9f7aea', '#805ad5'], isDefault: true },
+    { name: 'Maison & Entretien', emoji: '🧽', colors: ['#f093fb', '#f5576c'], isDefault: true },
+    { name: 'Poisson', emoji: '🐟', colors: ['#4299e1', '#667eea'], isDefault: false },
+    { name: 'Boissons', emoji: '🍷', colors: ['#f093fb', '#f5576c'], isDefault: false },
+    { name: 'Bébé', emoji: '👶', colors: ['#ffecd2', '#fcb69f'], isDefault: false },
+    { name: 'Bricolage', emoji: '🏠', colors: ['#11998e', '#38ef7d'], isDefault: false },
+    { name: 'Pâtisserie', emoji: '🎂', colors: ['#667eea', '#764ba2'], isDefault: false },
+  ];
+
+  // 🆕 Catégories personnalisées (état local)
+  const [customCategories, setCustomCategories] = useState([]);
+
+  // Palettes de couleurs disponibles
+  const colorPalettes = [
+    ['#FF8A80', '#7986CB'], // Corail-Violet
+    ['#FFCC80', '#A29BFE'], // Pêche-Violet  
+    ['#48bb78', '#38a169'], // Vert-Nature
+    ['#4299e1', '#667eea'], // Bleu-Océan
+    ['#ed8936', '#dd6b20'], // Orange-Sunset
+    ['#9f7aea', '#805ad5'], // Violet-Mystique
+    ['#f093fb', '#f5576c'], // Rose-Sakura
+    ['#11998e', '#38ef7d'], // Emeraude
+    ['#667eea', '#764ba2'], // Indigo-Nuit
+    ['#ffecd2', '#fcb69f'], // Sunset-Tropical
+  ];
+
+  // Emojis prédéfinis pour catégories
+  const categoryEmojis = [
+    '🏷️', '🛒', '🥤', '🧀', '🍖', '🧻', '🧴', '🎂',
+    '🍕', '🍜', '🥗', '🍯', '☕', '🍪', '🧊', '🔧',
+    '🎾', '📚', '🧸', '🌱', '🏠', '🚗', '💄', '🧼',
+  ];
+
+  // Fonctions utilitaires
+  const getDefaultCategories = () => predefinedCategories.filter(cat => cat.isDefault);
+  
+  const getAllCategories = () => {
+    const all = [...predefinedCategories, ...customCategories];
+    return all.sort((a, b) => a.name.localeCompare(b.name)); // 🔤 Ordre alphabétique
+  };
+
+  const getCategoryColors = (categoryName) => {
+    const category = getAllCategories().find(cat => cat.name === categoryName);
+    return category?.colors || ['#e2e8f0', '#cbd5e0'];
+  };
 
   // 🎯 Fonction pour toggle un article
   const toggleItem = (itemId: number) => {
@@ -44,13 +104,6 @@ export default function ShoppingScreen() {
           : item
       )
     );
-
-    // Feedback léger (optionnel)
-    const item = shoppingList.find(i => i.id === itemId);
-    if (item && !item.checked) {
-      // On vient de cocher l'article
-      // On pourrait ajouter un petit feedback sonore ici
-    }
   };
 
   // 🔄 Fonction pour décocher tous les articles
@@ -71,7 +124,7 @@ export default function ShoppingScreen() {
     );
   };
 
-  // 📝 Fonctions pour le modal d'ajout
+  // 📝 Fonctions pour les modaux
   const openModal = (category?: string) => {
     if (category) {
       setSelectedCategory(category);
@@ -86,13 +139,11 @@ export default function ShoppingScreen() {
   };
 
   const addNewItem = () => {
-    // Validation
     if (!newItemName.trim()) {
       Alert.alert('❌ Erreur', 'Veuillez saisir un nom d\'article');
       return;
     }
 
-    // Vérifier si l'article existe déjà
     const exists = shoppingList.some(item => 
       item.item.toLowerCase() === newItemName.trim().toLowerCase()
     );
@@ -102,10 +153,7 @@ export default function ShoppingScreen() {
       return;
     }
 
-    // Générer un nouvel ID
     const newId = Math.max(...shoppingList.map(item => item.id)) + 1;
-
-    // Ajouter le nouvel article
     const newItem: ShoppingItem = {
       id: newId,
       item: newItemName.trim(),
@@ -116,28 +164,100 @@ export default function ShoppingScreen() {
 
     setShoppingList(prev => [...prev, newItem]);
 
-    // Feedback de succès
     Alert.alert(
       '✅ Article ajouté !', 
       `"${newItemName}" a été ajouté à la liste`,
       [{ text: 'Super !', style: 'default' }]
     );
 
-    // Fermer le modal
     closeModal();
   };
 
-  const categories = ['Frais', 'Boulangerie', 'Fruits', 'Épicerie', 'Poisson', 'Légumes'];
-  const categoryColors: { [key: string]: string[] } = {
-    'Frais': ['#FF8A80', '#7986CB'],
-    'Boulangerie': ['#FFCC80', '#A29BFE'],
-    'Fruits': ['#48bb78', '#38a169'],
-    'Épicerie': ['#7986CB', '#FF8A80'],
-    'Poisson': ['#4299e1', '#667eea'],
-    'Légumes': ['#48bb78', '#68d391'],
+  // 🆕 Fonctions pour catégories personnalisées
+  const addNewCategory = () => {
+    if (!newCategoryName.trim()) {
+      Alert.alert('❌ Erreur', 'Veuillez saisir un nom de catégorie');
+      return;
+    }
+
+    // Vérifier la limite (10 catégories max)
+    if (customCategories.length >= 10) {
+      Alert.alert('⚠️ Limite atteinte', 'Maximum 10 catégories personnalisées autorisées');
+      return;
+    }
+
+    // Vérifier si le nom existe déjà
+    const exists = getAllCategories().some(cat => 
+      cat.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+    );
+
+    if (exists) {
+      Alert.alert('⚠️ Catégorie existante', 'Cette catégorie existe déjà');
+      return;
+    }
+
+    // Créer la nouvelle catégorie
+    const newCategory = {
+      id: `custom-${Date.now()}`,
+      name: newCategoryName.trim(),
+      emoji: selectedEmoji,
+      colors: colorPalettes[selectedColorIndex],
+      isDefault: false,
+      isCustom: true
+    };
+
+    setCustomCategories(prev => [...prev, newCategory]);
+
+    Alert.alert(
+      '✅ Catégorie créée !', 
+      `"${newCategoryName}" est maintenant disponible`,
+      [{ text: 'Super !', style: 'default' }]
+    );
+
+    closeNewCategoryModal();
   };
 
-  // 📋 Composant pour afficher un article (éviter duplication)
+  const deleteCategory = (categoryId) => {
+    // Vérifier si la catégorie est utilisée
+    const isUsed = shoppingList.some(item => {
+      const category = getAllCategories().find(cat => cat.name === item.category);
+      return category?.id === categoryId;
+    });
+
+    if (isUsed) {
+      Alert.alert(
+        '⚠️ Catégorie utilisée', 
+        'Cette catégorie ne peut pas être supprimée car elle est utilisée par des articles.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      '🗑️ Supprimer la catégorie',
+      'Êtes-vous sûr de vouloir supprimer cette catégorie ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Supprimer', 
+          style: 'destructive',
+          onPress: () => {
+            setCustomCategories(prev => prev.filter(cat => cat.id !== categoryId));
+            Alert.alert('✅ Supprimée', 'La catégorie a été supprimée');
+          }
+        }
+      ]
+    );
+  };
+
+  const closeNewCategoryModal = () => {
+    setIsNewCategoryModalVisible(false);
+    setNewCategoryName('');
+    setSelectedEmoji('🏷️');
+    setSelectedColorIndex(0);
+  };
+
+  // 📋 Composant pour afficher un article
   const ShoppingItemComponent = ({ item }: { item: ShoppingItem }) => (
     <TouchableOpacity 
       key={item.id} 
@@ -160,7 +280,7 @@ export default function ShoppingScreen() {
           </Text>
         </View>
         <LinearGradient
-          colors={categoryColors[item.category] || ['#e2e8f0', '#cbd5e0']}
+          colors={getCategoryColors(item.category)}
           style={[styles.categoryBadge, item.checked && styles.categoryBadgeChecked]}
         >
           <Text style={styles.categoryText}>{item.category}</Text>
@@ -185,7 +305,7 @@ export default function ShoppingScreen() {
       </LinearGradient>
 
       <ScrollView style={styles.content}>
-        {/* Stats rapides - Maintenant dynamiques */}
+        {/* Stats rapides */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{totalItems}</Text>
@@ -250,47 +370,65 @@ export default function ShoppingScreen() {
           </View>
         )}
 
-        {/* Catégories rapides */}
+        {/* 🆕 Catégories mises à jour - 7 + Autres */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏷️ Ajouter par catégorie</Text>
           <View style={styles.categoriesGrid}>
-            {categories.map((category) => (
+            {getDefaultCategories().map((category) => (
               <TouchableOpacity 
-                key={category} 
+                key={category.name} 
                 style={styles.categoryCard}
-                onPress={() => openModal(category)}
+                onPress={() => openModal(category.name)}
                 activeOpacity={0.7}
               >
                 <LinearGradient
-                  colors={categoryColors[category]}
+                  colors={category.colors}
                   style={styles.categoryIcon}
                 >
-                  <Text style={styles.categoryEmoji}>
-                    {category === 'Frais' ? '🥛' : 
-                     category === 'Boulangerie' ? '🍞' :
-                     category === 'Fruits' ? '🍎' :
-                     category === 'Épicerie' ? '🥫' :
-                     category === 'Poisson' ? '🐟' : '🥬'}
-                  </Text>
+                  <Text style={styles.categoryEmoji}>{category.emoji}</Text>
                 </LinearGradient>
-                <Text style={styles.categoryCardText}>{category}</Text>
+                <Text 
+                  style={styles.categoryCardText}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {category.name}
+                </Text>
               </TouchableOpacity>
             ))}
+            
+            {/* 🆕 Bouton "Autres" */}
+            <TouchableOpacity 
+              style={[styles.categoryCard, styles.categoryCardOthers]}
+              onPress={() => setIsAllCategoriesModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.categoryIcon, styles.categoryIconOthers]}>
+                <Text style={styles.categoryEmoji}>➕</Text>
+              </View>
+              <Text 
+                style={styles.categoryCardText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Autres
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* 🚀 Bouton flottant d'ajout - Composant réutilisable */}
+      {/* Bouton flottant d'ajout */}
       <FloatingActionButton
         onPress={() => openModal()}
-        colors={['#FFCC80', '#A29BFE']} // Couleurs Shopping
+        colors={['#FFCC80', '#A29BFE']}
         icon="+"
         shadowColor="#FFCC80"
       />
 
-      {/* 📝 Modal d'ajout d'article */}
+      {/* Modal d'ajout d'article */}
       <Modal
         visible={isModalVisible}
         animationType="slide"
@@ -302,7 +440,6 @@ export default function ShoppingScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <SafeAreaView style={styles.modalContent}>
-            {/* Header du modal */}
             <View style={styles.modalHeader}>
               <TouchableOpacity 
                 style={styles.modalCloseBtn}
@@ -323,7 +460,6 @@ export default function ShoppingScreen() {
             </View>
 
             <ScrollView style={styles.modalBody}>
-              {/* Champ nom de l'article */}
               <View style={styles.inputSection}>
                 <Text style={styles.inputLabel}>📝 Nom de l'article</Text>
                 <TextInput
@@ -337,43 +473,38 @@ export default function ShoppingScreen() {
                 />
               </View>
 
-              {/* Sélection catégorie */}
               <View style={styles.inputSection}>
                 <Text style={styles.inputLabel}>🏷️ Catégorie</Text>
                 <View style={styles.categorySelector}>
-                  {categories.map((category) => (
+                  {getAllCategories().map((category) => (
                     <TouchableOpacity
-                      key={category}
+                      key={category.name}
                       style={[
                         styles.categoryOption,
-                        selectedCategory === category && styles.categoryOptionSelected
+                        selectedCategory === category.name && styles.categoryOptionSelected
                       ]}
-                      onPress={() => setSelectedCategory(category)}
+                      onPress={() => setSelectedCategory(category.name)}
                     >
                       <LinearGradient
-                        colors={selectedCategory === category ? categoryColors[category] : ['#f7fafc', '#edf2f7']}
+                        colors={selectedCategory === category.name ? category.colors : ['#f7fafc', '#edf2f7']}
                         style={styles.categoryOptionIcon}
                       >
-                        <Text style={styles.categoryOptionEmoji}>
-                          {category === 'Frais' ? '🥛' : 
-                           category === 'Boulangerie' ? '🍞' :
-                           category === 'Fruits' ? '🍎' :
-                           category === 'Épicerie' ? '🥫' :
-                           category === 'Poisson' ? '🐟' : '🥬'}
-                        </Text>
+                        <Text style={styles.categoryOptionEmoji}>{category.emoji}</Text>
                       </LinearGradient>
                       <Text style={[
                         styles.categoryOptionText,
-                        selectedCategory === category && styles.categoryOptionTextSelected
-                      ]}>
-                        {category}
+                        selectedCategory === category.name && styles.categoryOptionTextSelected
+                      ]}
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                      >
+                        {category.name}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
 
-              {/* Info utilisateur */}
               <View style={styles.infoSection}>
                 <Text style={styles.infoText}>
                   👤 Ajouté par {currentUser}
@@ -382,6 +513,214 @@ export default function ShoppingScreen() {
             </ScrollView>
           </SafeAreaView>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 🆕 Modal "Nouvelle catégorie" */}
+      <Modal
+        visible={isNewCategoryModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeNewCategoryModal}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <SafeAreaView style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity 
+                style={styles.modalCloseBtn}
+                onPress={closeNewCategoryModal}
+              >
+                <Text style={styles.modalCloseText}>Annuler</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>✨ Nouvelle catégorie</Text>
+              <TouchableOpacity 
+                style={[styles.modalSaveBtn, !newCategoryName.trim() && styles.modalSaveBtnDisabled]}
+                onPress={addNewCategory}
+                disabled={!newCategoryName.trim()}
+              >
+                <Text style={[styles.modalSaveText, !newCategoryName.trim() && styles.modalSaveTextDisabled]}>
+                  Créer
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Nom de la catégorie */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>📝 Nom de la catégorie</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  placeholder="Ex: Bio, Animalerie, Jardinage..."
+                  placeholderTextColor="#a0aec0"
+                  autoFocus={true}
+                  returnKeyType="next"
+                />
+              </View>
+
+              {/* Choix d'emoji */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>😊 Emoji</Text>
+                <View style={styles.emojiSelector}>
+                  {categoryEmojis.map((emoji, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.emojiOption,
+                        selectedEmoji === emoji && styles.emojiOptionSelected
+                      ]}
+                      onPress={() => setSelectedEmoji(emoji)}
+                    >
+                      <Text style={styles.emojiOptionText}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Choix de couleur */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>🎨 Couleur</Text>
+                <View style={styles.colorSelector}>
+                  {colorPalettes.map((colors, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.colorOption,
+                        selectedColorIndex === index && styles.colorOptionSelected
+                      ]}
+                      onPress={() => setSelectedColorIndex(index)}
+                    >
+                      <LinearGradient
+                        colors={colors}
+                        style={styles.colorOptionGradient}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Prévisualisation */}
+              <View style={styles.previewSection}>
+                <Text style={styles.inputLabel}>👀 Aperçu</Text>
+                <View style={styles.categoryPreview}>
+                  <LinearGradient
+                    colors={colorPalettes[selectedColorIndex]}
+                    style={styles.categoryIcon}
+                  >
+                    <Text style={styles.categoryEmoji}>{selectedEmoji}</Text>
+                  </LinearGradient>
+                  <Text 
+                    style={styles.categoryCardText}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {newCategoryName || 'Votre catégorie'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Info limite */}
+              <View style={styles.infoSection}>
+                <Text style={styles.infoText}>
+                  📊 {customCategories.length}/10 catégories personnalisées
+                </Text>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* 🆕 Modal "Toutes les catégories" */}
+      <Modal
+        visible={isAllCategoriesModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsAllCategoriesModalVisible(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setIsAllCategoriesModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Fermer</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>📋 Toutes les catégories</Text>
+            <View style={styles.modalSaveBtn} />
+          </View>
+
+          <ScrollView style={styles.modalBody}>
+            <View style={styles.allCategoriesGrid}>
+              {getAllCategories().map((category) => (
+                <View key={category.name || category.id} style={styles.categoryCardContainer}>
+                  <TouchableOpacity 
+                    style={[styles.categoryCard, styles.categoryCardInContainer]}
+                    onPress={() => {
+                      setIsAllCategoriesModalVisible(false);
+                      openModal(category.name);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <LinearGradient
+                      colors={category.colors}
+                      style={styles.categoryIcon}
+                    >
+                      <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                    </LinearGradient>
+                    <Text 
+                      style={styles.categoryCardText}
+                      numberOfLines={2} 
+                      ellipsizeMode="tail"
+                    >
+                      {category.name}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {/* 🗑️ Bouton supprimer pour catégories custom */}
+                  {category.isCustom && (
+                    <TouchableOpacity 
+                      style={styles.deleteCategoryBtn}
+                      onPress={() => deleteCategory(category.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.deleteCategoryText}>×</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              
+              {/* 🆕 Bouton créer nouvelle catégorie */}
+              <TouchableOpacity 
+                style={[styles.categoryCard, styles.createCategoryCard]}
+                onPress={() => {
+                  setIsAllCategoriesModalVisible(false);
+                  setIsNewCategoryModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={['#FF8A80', '#7986CB']}
+                  style={styles.categoryIcon}
+                >
+                  <Text style={styles.categoryEmoji}>✨</Text>
+                </LinearGradient>
+                <Text 
+                  style={[styles.categoryCardText, styles.createCategoryText]}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  Créer nouvelle
+                </Text>
+                <Text style={styles.categoryLimit}>
+                  ({customCategories.length}/10)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -543,7 +882,6 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 
-  // ✨ Nouveaux styles pour états spéciaux
   emptyState: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -626,7 +964,8 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10, // 🆕 Gap cohérent
+    justifyContent: 'space-between', // 🆕 Meilleure répartition
   },
   
   categoryCard: {
@@ -635,11 +974,33 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     width: '30%',
+    minWidth: 90, // 🆕 Largeur minimale pour éviter le texte vertical
+    minHeight: 80, // 🆕 Hauteur minimale pour cohérence
+    justifyContent: 'center', // 🆕 Centrage vertical
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  
+  // 🆕 Styles pour bouton "Autres"
+  categoryCardOthers: {
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+  },
+
+  categoryIconOthers: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f7fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
   },
   
   categoryIcon: {
@@ -660,13 +1021,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2d3748',
     textAlign: 'center',
+    lineHeight: 16, // 🆕 Espacement lignes amélioré
+    marginTop: 4, // 🆕 Espacement avec l'icône
   },
   
   bottomSpacer: {
-    height: 50, // Réduit car plus de bouton dans le scroll
+    height: 50,
   },
 
-  // 📝 Styles pour le modal d'ajout
+  // Styles pour les modaux
   modalContainer: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -728,6 +1091,140 @@ const styles = StyleSheet.create({
   modalBody: {
     flex: 1,
     padding: 20,
+  },
+
+  // 🆕 Grille toutes catégories
+  allCategoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10, // 🆕 Gap réduit pour plus d'espace
+    paddingBottom: 20,
+    justifyContent: 'space-between', // 🆕 Meilleure répartition
+  },
+
+  // 🆕 Conteneur pour catégorie + bouton supprimer
+  categoryCardContainer: {
+    position: 'relative',
+    width: '31%', // 🆕 Légèrement plus large
+    minWidth: 95, // 🆕 Largeur minimale
+  },
+
+  // Dans le conteneur, la carte doit prendre toute la largeur
+  categoryCardInContainer: {
+    width: '100%', // 🆕 Prend toute la largeur du conteneur
+    minWidth: 'auto', // 🆕 Pas de contrainte minimale
+  },
+
+  // 🆕 Bouton supprimer catégorie
+  deleteCategoryBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f56565',
+    borderWidth: 2,
+    borderColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#f56565',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  deleteCategoryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    lineHeight: 20,
+  },
+
+  // 🆕 Bouton créer catégorie
+  createCategoryCard: {
+    borderWidth: 2,
+    borderColor: '#FF8A80',
+    backgroundColor: '#fef5e7',
+  },
+
+  createCategoryText: {
+    color: '#FF8A80',
+    fontWeight: '600',
+  },
+
+  categoryLimit: {
+    fontSize: 10,
+    color: '#4a5568',
+    marginTop: 2,
+  },
+
+  // 🆕 Sélecteur d'emoji
+  emojiSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  emojiOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f7fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emojiOptionSelected: {
+    backgroundColor: '#FF8A80',
+    borderColor: '#FF8A80',
+  },
+
+  emojiOptionText: {
+    fontSize: 24,
+  },
+
+  // 🆕 Sélecteur de couleur
+  colorSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 2,
+  },
+
+  colorOptionSelected: {
+    borderColor: '#2d3748',
+    borderWidth: 3,
+  },
+
+  colorOptionGradient: {
+    flex: 1,
+    borderRadius: 22,
+  },
+
+  // 🆕 Prévisualisation
+  previewSection: {
+    marginTop: 10,
+  },
+
+  categoryPreview: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
 
   inputSection: {
@@ -803,6 +1300,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#4a5568',
     textAlign: 'center',
+    marginTop: 4, // 🆕 Espacement avec l'icône
   },
 
   categoryOptionTextSelected: {
