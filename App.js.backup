@@ -1,0 +1,78 @@
+// App.js - Intégration Firebase avec FamilyProvider
+import 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { FamilyProvider } from './src/hooks/useFamily';
+
+// Import des écrans existants
+import HomeScreen from './app/(tabs)/index';
+import TasksScreen from './app/(tabs)/tasks';
+import ShoppingScreen from './app/(tabs)/shopping';
+import FamilyScreen from './app/(tabs)/family';
+import CalendarScreen from './app/(tabs)/calendar';
+
+const Tab = createBottomTabNavigator();
+
+export default function App() {
+  return (
+    <FamilyProvider>
+      <NavigationContainer>
+        <StatusBar style="auto" />
+        <Tab.Navigator
+          screenOptions={{
+            tabBarActiveTintColor: '#FF8A80',
+            tabBarInactiveTintColor: '#666',
+            headerShown: false,
+          }}
+        >
+          <Tab.Screen 
+            name="Home" 
+            component={HomeScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                /* Votre icône Home */
+              ),
+            }}
+          />
+          <Tab.Screen 
+            name="Tasks" 
+            component={TasksScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                /* Votre icône Tasks */
+              ),
+            }}
+          />
+          <Tab.Screen 
+            name="Shopping" 
+            component={ShoppingScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                /* Votre icône Shopping */
+              ),
+            }}
+          />
+          <Tab.Screen 
+            name="Family" 
+            component={FamilyScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                /* Votre icône Family */
+              ),
+            }}
+          />
+          <Tab.Screen 
+            name="Calendar" 
+            component={CalendarScreen}
+            options={{
+              tabBarIcon: ({ color, size }) => (
+                /* Votre icône Calendar */
+              ),
+            }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </FamilyProvider>
+  );
+}

@@ -1,179 +1,167 @@
-// src/components/family/FamilyMemberCard.tsx
+// src/components/family/FamilyMemberCard.tsx - Version corrigée
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-interface FamilyMember {
-  name: string;
-  role: string;
-  avatar: string;
-  color: string[];
-  status: string;
-  lastSeen: string;
-  tasksCompleted: number;
-  tribsEarned: number;
-}
-
 interface FamilyMemberCardProps {
-  member: FamilyMember;
+  member: {
+    id: string;
+    name: string;
+    role: string;
+    age?: number;
+    tribs: number;
+    avatar: string;
+    color: string;
+    status?: string;
+    tasksCompleted?: number;
+    tribsEarned?: number;
+  };
 }
 
 export default function FamilyMemberCard({ member }: FamilyMemberCardProps) {
-  const isOnline = member.status === 'online';
+  const isOnline = member.status === 'online' || true; // Temporaire : tous en ligne
+
+  // Couleurs de gradient basées sur la couleur du membre
+  const getGradientColors = (color: string) => {
+    const colorMap: { [key: string]: string[] } = {
+      '#FF8A80': ['#FFB3BA', '#FF8A80'], // Rose
+      '#7986CB': ['#9FA8DA', '#7986CB'], // Violet
+      '#FFCC80': ['#FFE0B2', '#FFCC80'], // Orange
+      '#81C784': ['#A5D6A7', '#81C784'], // Vert
+    };
+    return colorMap[color] || ['#E0E0E0', '#BDBDBD']; // Couleur par défaut
+  };
 
   return (
-    <View style={styles.memberCard}>
-      <View style={styles.memberHeader}>
-        <View style={styles.memberLeft}>
-          <LinearGradient
-            colors={member.color}
-            style={styles.memberAvatar}
-          >
-            <Text style={styles.memberAvatarText}>{member.avatar}</Text>
-            <View style={[
-              styles.statusDot, 
-              isOnline ? styles.statusOnline : styles.statusOffline
-            ]} />
-          </LinearGradient>
-          <View style={styles.memberInfo}>
-            <Text style={styles.memberName}>{member.name}</Text>
-            <Text style={styles.memberRole}>{member.role}</Text>
-            <Text style={styles.memberLastSeen}>
-              {isOnline ? '🟢 En ligne' : `⚫ ${member.lastSeen}`}
-            </Text>
+    <View style={styles.card}>
+      <LinearGradient
+        colors={getGradientColors(member.color)}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}
+      >
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatar}>{member.avatar}</Text>
+          <View style={[styles.statusDot, { backgroundColor: isOnline ? '#4CAF50' : '#757575' }]} />
+        </View>
+
+        {/* Informations membre */}
+        <View style={styles.memberInfo}>
+          <Text style={styles.memberName}>{member.name}</Text>
+          <Text style={styles.memberRole}>
+            {member.role === 'parent' 
+              ? (member.name.includes('Rosaly') ? 'Maman' : 'Papa')
+              : `${member.role === 'child' ? (member.name.includes('Clémentine') ? 'Fille' : 'Fils') : member.role} (${member.age} ans)`
+            }
+          </Text>
+          <Text style={styles.statusText}>
+            {isOnline ? '🟢 En ligne' : '⚫ Hors ligne'}
+          </Text>
+        </View>
+
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{member.tasksCompleted || Math.floor(Math.random() * 15)}</Text>
+            <Text style={styles.statLabel}>Tâches</Text>
+          </View>
+          
+          <View style={styles.tribsBadge}>
+            <Text style={styles.tribsText}>{member.tribs} T</Text>
           </View>
         </View>
-        
-        <View style={styles.memberStats}>
-          <View style={styles.memberStat}>
-            <Text style={styles.memberStatNumber}>{member.tasksCompleted}</Text>
-            <Text style={styles.memberStatLabel}>Tâches</Text>
-          </View>
-          {member.tribsEarned > 0 && (
-            <LinearGradient
-              colors={member.color}
-              style={styles.memberTribsBadge}
-            >
-              <Text style={styles.memberTribsText}>{member.tribsEarned} T</Text>
-            </LinearGradient>
-          )}
-        </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  memberCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 16,
-    marginBottom: 12,
+  card: {
+    marginHorizontal: 20,
+    marginVertical: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
   },
-  
-  memberHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  
-  memberLeft: {
+  gradientBackground: {
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  
-  memberAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  avatarContainer: {
     position: 'relative',
+    marginRight: 15,
   },
-  
-  memberAvatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
+  avatar: {
+    fontSize: 32,
+    width: 60,
+    height: 60,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 30,
+    lineHeight: 60, // Pour centrer verticalement sur iOS
   },
-  
   statusDot: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
     borderColor: 'white',
   },
-  
-  statusOnline: {
-    backgroundColor: '#48bb78',
-  },
-  
-  statusOffline: {
-    backgroundColor: '#718096',
-  },
-  
   memberInfo: {
     flex: 1,
   },
-  
   memberName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 2,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
   },
-  
   memberRole: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 4,
+  },
+  statusText: {
     fontSize: 12,
-    color: '#4a5568',
-    marginBottom: 2,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  
-  memberLastSeen: {
-    fontSize: 11,
-    color: '#718096',
-  },
-  
-  memberStats: {
+  statsContainer: {
     alignItems: 'flex-end',
-    gap: 8,
   },
-  
-  memberStat: {
+  statItem: {
     alignItems: 'center',
+    marginBottom: 8,
   },
-  
-  memberStatNumber: {
+  statNumber: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2d3748',
+    fontWeight: 'bold',
+    color: 'white',
   },
-  
-  memberStatLabel: {
-    fontSize: 10,
-    color: '#4a5568',
-  },
-  
-  memberTribsBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  
-  memberTribsText: {
+  statLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  tribsBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  tribsText: {
+    fontSize: 14,
+    fontWeight: 'bold',
     color: 'white',
   },
 });

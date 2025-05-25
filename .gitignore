@@ -37,3 +37,8 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Firebase
+.env
+.env.local
+firebase-debug.log

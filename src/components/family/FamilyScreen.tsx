@@ -1,177 +1,135 @@
-// src/components/family/FamilyScreen.tsx
+// src/components/family/FamilyScreen.tsx - Version Firebase corrigée
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text } from 'react-native';
-
-// Import des composants
+import { useFamily } from '../../hooks/useFamily';
 import FamilyStats from './FamilyStats';
 import FamilyMemberCard from './FamilyMemberCard';
 import FamilySettings from './FamilySettings';
 
-export default function FamilyScreen() {
-  // Données des membres famille
-  const familyMembers = [
-    {
-      name: 'Rosaly',
-      role: 'Maman',
-      avatar: 'R',
-      color: ['#FF8A80', '#7986CB'],
-      status: 'online',
-      lastSeen: 'Maintenant',
-      tasksCompleted: 12,
-      tribsEarned: 0 // Parents n'ont pas de Tribs
-    },
-    {
-      name: 'Ludwig',
-      role: 'Papa',
-      avatar: 'L',
-      color: ['#48bb78', '#38a169'],
-      status: 'offline',
-      lastSeen: 'Il y a 2h',
-      tasksCompleted: 8,
-      tribsEarned: 0
-    },
-    {
-      name: 'Clémentine',
-      role: 'Fille (12 ans)',
-      avatar: 'C',
-      color: ['#FFCC80', '#A29BFE'],
-      status: 'online',
-      lastSeen: 'Maintenant',
-      tasksCompleted: 15,
-      tribsEarned: 235
-    },
-    {
-      name: 'Jacob',
-      role: 'Fils (8 ans)',
-      avatar: 'J',
-      color: ['#FF8A80', '#FFCC80'],
-      status: 'online',
-      lastSeen: 'Maintenant',
-      tasksCompleted: 10,
-      tribsEarned: 180
-    }
-  ];
+const FamilyScreen = () => {
+  // Utiliser les données Firebase au lieu des données locales
+  const { 
+    familyData, 
+    currentMember,
+    stats,
+    loading 
+  } = useFamily();
 
-  // Réglages famille
-  const familySettings = [
-    {
-      title: 'Système Tribs',
-      description: 'Configurer récompenses et valeurs',
-      emoji: '🏆',
-      colors: ['#FF8A80', '#7986CB'],
-      onPress: () => console.log('Navigate to Tribs Settings')
-    },
-    {
-      title: 'Notifications',
-      description: 'Gérer les alertes famille',
-      emoji: '🔔',
-      colors: ['#48bb78', '#38a169'],
-      onPress: () => console.log('Navigate to Notifications')
-    },
-    {
-      title: 'Inviter membres',
-      description: 'Ajouter grands-parents, baby-sitter...',
-      emoji: '👥',
-      colors: ['#FFCC80', '#A29BFE'],
-      onPress: () => console.log('Navigate to Invite Members')
-    },
-    {
-      title: 'Premium',
-      description: 'IA + Fonctionnalités avancées',
-      emoji: '⭐',
-      colors: ['#667eea', '#764ba2'],
-      onPress: () => console.log('Navigate to Premium')
-    }
-  ];
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Chargement...</Text>
+      </View>
+    );
+  }
 
-  // Calculs dynamiques
-  const totalTribs = familyMembers.reduce((sum, member) => sum + member.tribsEarned, 0);
-  const onlineMembers = familyMembers.filter(member => member.status === 'online').length;
+  // Utiliser les membres depuis Firebase
+  const familyMembers = familyData?.members || [];
+  const onlineMembers = familyMembers.filter(member => member.status === 'online' || true).length; // Temporaire: tous en ligne
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={['#7986CB', '#A29BFE']}
-        style={styles.header}
+        colors={['#7986CB', '#FF8A80']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        style={styles.header}
       >
-        <Text style={styles.headerTitle}>👨‍👩‍👧‍👦 Famille Questroy</Text>
-        <Text style={styles.headerSubtitle}>{onlineMembers}/4 membres connectés</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.familyIcon}>
+            <Text style={styles.familyIconText}>👥</Text>
+          </View>
+          <View>
+            <Text style={styles.familyName}>Famille {familyData?.name || 'Questroy'}</Text>
+            <Text style={styles.membersCount}>{onlineMembers}/{familyMembers.length} membres connectés</Text>
+          </View>
+        </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content}>
-        {/* Statistiques famille */}
-        <FamilyStats
-          totalTribs={totalTribs}
-          totalMembers={familyMembers.length}
-          onlineMembers={onlineMembers}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Stats famille */}
+        <FamilyStats 
+          stats={{
+            totalTribs: familyMembers.reduce((sum, member) => sum + (member.tribs || 0), 0),
+            membersOnline: onlineMembers,
+            totalMembers: familyMembers.length
+          }} 
         />
 
-        {/* Membres de la famille */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>👥 Membres de la famille</Text>
-          {familyMembers.map((member, index) => (
-            <FamilyMemberCard key={index} member={member} />
+        {/* Membres de la famille - Données Firebase */}
+        <View style={styles.membersSection}>
+          <Text style={styles.sectionTitle}>Membres de la famille</Text>
+          {familyMembers.map((member) => (
+            <FamilyMemberCard 
+              key={member.id}
+              member={{
+                ...member,
+                status: 'online', // Temporaire - tous en ligne
+                tasksCompleted: Math.floor(Math.random() * 10), // Temporaire
+                tribsEarned: member.tribs || 0
+              }}
+            />
           ))}
         </View>
 
-        {/* Réglages famille */}
-        <FamilySettings settings={familySettings} />
-
-        <View style={styles.bottomSpacer} />
+        {/* Settings */}
+        <FamilySettings />
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  
   header: {
+    paddingTop: 60,
+    paddingBottom: 30,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 25,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
   },
-  
-  headerTitle: {
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  familyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  familyIconText: {
     fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 5,
   },
-  
-  headerSubtitle: {
-    fontSize: 14,
+  familyName: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: 'white',
-    opacity: 0.9,
+    marginBottom: 4,
   },
-  
+  membersCount: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
   },
-  
-  section: {
-    marginBottom: 25,
+  membersSection: {
+    marginTop: 20,
   },
-  
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2d3748',
+    fontWeight: '600',
+    color: '#37474F',
     marginBottom: 15,
   },
-  
-  bottomSpacer: {
-    height: 100,
-  },
 });
+
+export default FamilyScreen;

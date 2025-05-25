@@ -1,18 +1,9 @@
-// src/components/family/FamilySettings.tsx
+// src/components/family/FamilySettings.tsx - Version corrigée
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-
-interface SettingItem {
-  title: string;
-  description: string;
-  emoji: string;
-  colors: string[];
-  onPress: () => void;
-}
 
 interface FamilySettingsProps {
-  settings: SettingItem[];
+  settings?: any; // Optionnel pour éviter les erreurs
 }
 
 export default function FamilySettings({ settings }: FamilySettingsProps) {
@@ -20,88 +11,128 @@ export default function FamilySettings({ settings }: FamilySettingsProps) {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>⚙️ Réglages famille</Text>
       
-      {settings.map((setting, index) => (
-        <TouchableOpacity key={index} style={styles.settingCard} onPress={setting.onPress}>
-          <View style={styles.settingLeft}>
-            <LinearGradient
-              colors={setting.colors}
-              style={styles.settingIcon}
-            >
-              <Text style={styles.settingEmoji}>{setting.emoji}</Text>
-            </LinearGradient>
-            <View>
-              <Text style={styles.settingTitle}>{setting.title}</Text>
-              <Text style={styles.settingDesc}>{setting.description}</Text>
-            </View>
-          </View>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
-      ))}
+      {/* Système Tribs */}
+      <TouchableOpacity style={styles.settingCard}>
+        <View style={styles.settingIcon}>
+          <Text style={styles.iconText}>🏆</Text>
+        </View>
+        <View style={styles.settingContent}>
+          <Text style={styles.settingTitle}>Système Tribs</Text>
+          <Text style={styles.settingSubtitle}>Configurer récompenses et valeurs</Text>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
+
+      {/* Notifications */}
+      <TouchableOpacity style={styles.settingCard}>
+        <View style={styles.settingIcon}>
+          <Text style={styles.iconText}>🔔</Text>
+        </View>
+        <View style={styles.settingContent}>
+          <Text style={styles.settingTitle}>Notifications</Text>
+          <Text style={styles.settingSubtitle}>Gérer les alertes famille</Text>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
+
+      {/* Premium */}
+      <TouchableOpacity style={[styles.settingCard, styles.premiumCard]}>
+        <View style={styles.settingIcon}>
+          <Text style={styles.iconText}>⭐</Text>
+        </View>
+        <View style={styles.settingContent}>
+          <Text style={styles.settingTitle}>Premium</Text>
+          <Text style={styles.settingSubtitle}>Assistant IA et fonctions avancées</Text>
+        </View>
+        <View style={styles.premiumBadge}>
+          <Text style={styles.premiumText}>€4.99/mois</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Inviter des membres */}
+      <TouchableOpacity style={styles.settingCard}>
+        <View style={styles.settingIcon}>
+          <Text style={styles.iconText}>👥</Text>
+        </View>
+        <View style={styles.settingContent}>
+          <Text style={styles.settingTitle}>Inviter des membres</Text>
+          <Text style={styles.settingSubtitle}>Ajouter famille ou amis</Text>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 25,
+    marginTop: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 100, // Espace pour la navigation
   },
-  
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2d3748',
+    fontWeight: '600',
+    color: '#37474F',
     marginBottom: 15,
   },
-  
   settingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    borderRadius: 12,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 2,
   },
-  
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  premiumCard: {
+    borderWidth: 1,
+    borderColor: '#FFD700',
+    backgroundColor: '#FFFEF7',
   },
-  
   settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
-  
-  settingEmoji: {
-    fontSize: 18,
+  iconText: {
+    fontSize: 20,
   },
-  
+  settingContent: {
+    flex: 1,
+  },
   settingTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2d3748',
+    color: '#37474F',
     marginBottom: 2,
   },
-  
-  settingDesc: {
-    fontSize: 12,
-    color: '#4a5568',
+  settingSubtitle: {
+    fontSize: 14,
+    color: '#666',
   },
-  
-  settingArrow: {
+  arrow: {
     fontSize: 20,
-    color: '#cbd5e0',
+    color: '#CCC',
     fontWeight: '300',
+  },
+  premiumBadge: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  premiumText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
   },
 });
