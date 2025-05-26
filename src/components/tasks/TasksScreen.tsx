@@ -1,5 +1,5 @@
-// src/components/tasks/TasksScreen.tsx
-import React, { useState } from 'react';
+// src/components/tasks/TasksScreen.tsx - Version dynamique avec Auth + Firebase
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -9,96 +9,49 @@ import TaskItem from './TaskItem';
 import CollapsibleSection from './CollapsibleSection';
 import CompletedTasksList from './CompletedTasksList';
 
+// Import des hooks
+import { useAuth } from '../../hooks/useAuth';
+import { useFamily } from '../../hooks/useFamily';
+import { tasksService } from '../../services/tasksService';
+
 interface Task {
-  id: number;
+  id: string;
   title: string;
   assignee: string;
+  assigneeId: string;
   tribs: number;
   status: 'pending' | 'completed';
   color: string[];
   dueDate?: Date;
   completedAt?: string;
   completedDate?: Date;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  createdBy?: string;
+  familyId?: string;
 }
 
 export default function TasksScreen() {
-  // 🗃️ État principal des tâches
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: 'Ranger sa chambre',
-      assignee: 'Clémentine',
-      tribs: 15,
-      status: 'pending',
-      color: ['#FF8A80', '#7986CB'],
-      dueDate: new Date() // Aujourd'hui - urgent!
-    },
-    {
-      id: 2,
-      title: 'Faire ses devoirs',
-      assignee: 'Clémentine',
-      tribs: 25,
-      status: 'completed',
-      color: ['#FF8A80', '#7986CB'],
-      completedAt: '16:30',
-      completedDate: new Date() // Aujourd'hui
-    },
-    {
-      id: 3,
-      title: 'Nourrir le chat',
-      assignee: 'Jacob',
-      tribs: 10,
-      status: 'pending',
-      color: ['#FFCC80', '#A29BFE'],
-      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // Demain
-    },
-    {
-      id: 4,
-      title: 'Mettre la table',
-      assignee: 'Jacob',
-      tribs: 8,
-      status: 'completed',
-      color: ['#FFCC80', '#A29BFE'],
-      completedAt: '12:15',
-      completedDate: new Date(Date.now() - 24 * 60 * 60 * 1000) // Hier
-    },
-    {
-      id: 5,
-      title: 'Réviser maths',
-      assignee: 'Clémentine',
-      tribs: 20,
-      status: 'pending',
-      color: ['#FF8A80', '#7986CB'],
-      dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000) // Hier - en retard!
-    },
-    {
-      id: 6,
-      title: 'Sortir la poubelle',
-      assignee: 'Jacob',
-      tribs: 5,
-      status: 'pending',
-      color: ['#FFCC80', '#A29BFE'],
-      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // Dans 3 jours
-    },
-    {
-      id: 7,
-      title: 'Préparer exposé histoire',
-      assignee: 'Clémentine',
-      tribs: 30,
-      status: 'pending',
-      color: ['#FF8A80', '#7986CB'],
-      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // Dans 5 jours
-    },
-    {
-      id: 8,
-      title: 'Arroser les plantes',
-      assignee: 'Jacob',
-      tribs: 8,
-      status: 'pending',
-      color: ['#FFCC80', '#A29BFE'],
-      dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) // Dans 10 jours
-    }
-  ]);
+  // 🔐 Données d'authentification
+  const { 
+    userName, 
+    familyMember, 
+    isAuthenticated, 
+    userRole 
+  } = useAuth();
+
+  // 👥 Données famille
+  const { 
+    familyData, 
+    tasks: familyTasks, 
+    stats, 
+    familyId, 
+    updateTribs, 
+    loading: familyLoading 
+  } = useFamily();
+
+  // 🗃️ État local pour les tâches
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // 📂 État pour gérer les sections repliables
   const [expandedSections, setExpandedSections] = useState({
@@ -106,7 +59,111 @@ export default function TasksScreen() {
     later: false
   });
 
-  // 🎯 Fonctions utilitaires
+  // 🔄 Charger les tâches depuis Firebase
+  useEffect(() => {
+    if (!familyId || !isAuthenticated) {
+      // Mode fallback avec données d'exemple si pas connecté
+      setTasks(getExampleTasks());
+      setLoading(false);
+      return;
+    }
+
+    // Utiliser les tâches depuis useFamily (temps réel)
+    if (familyTasks && familyTasks.length > 0) {
+      const processedTasks = familyTasks.map(task => ({
+        ...task,
+        color: getMemberColor(task.assigneeId || task.assignee),
+        dueDate: task.dueDate ? new Date(task.dueDate.seconds * 1000) : undefined,
+        completedDate: task.completedAt ? new Date(task.completedAt.seconds * 1000) : undefined
+      }));
+      
+      setTasks(processedTasks);
+      console.log('✅ Tâches Firebase chargées:', processedTasks.length);
+    } else {
+      // Si pas de tâches Firebase, utiliser des exemples
+      setTasks(getExampleTasks());
+      console.log('📝 Utilisation tâches d\'exemple');
+    }
+    
+    setLoading(false);
+  }, [familyTasks, familyId, isAuthenticated, familyData]);
+
+  // 🎨 Récupérer la couleur d'un membre
+  const getMemberColor = (memberId: string): string[] => {
+    if (!familyData?.members) return ['#FF8A80', '#7986CB'];
+    
+    const member = familyData.members.find(m => m.id === memberId || m.name === memberId);
+    if (member?.color) {
+      return [member.color, member.color];
+    }
+    return ['#FF8A80', '#7986CB'];
+  };
+
+  // 📝 Tâches d'exemple (fallback)
+  const getExampleTasks = (): Task[] => {
+    const currentUser = familyMember?.name || userName || 'Utilisateur';
+    
+    return [
+      {
+        id: 'task-1',
+        title: 'Ranger sa chambre',
+        assignee: 'Clémentine',
+        assigneeId: 'user-003',
+        tribs: 15,
+        status: 'pending' as const,
+        color: ['#FF8A80', '#7986CB'],
+        dueDate: new Date(),
+        difficulty: 'medium' as const
+      },
+      {
+        id: 'task-2',
+        title: 'Faire ses devoirs',
+        assignee: 'Clémentine',
+        assigneeId: 'user-003',
+        tribs: 25,
+        status: 'completed' as const,
+        color: ['#FF8A80', '#7986CB'],
+        completedAt: '16:30',
+        completedDate: new Date(),
+        difficulty: 'hard' as const
+      },
+      {
+        id: 'task-3',
+        title: 'Nourrir le chat',
+        assignee: 'Jacob',
+        assigneeId: 'user-004',
+        tribs: 10,
+        status: 'pending' as const,
+        color: ['#FFCC80', '#A29BFE'],
+        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        difficulty: 'easy' as const
+      },
+      {
+        id: 'task-4',
+        title: 'Mettre la table',
+        assignee: currentUser,
+        assigneeId: familyMember?.id || 'user-001',
+        tribs: 8,
+        status: 'pending' as const,
+        color: getMemberColor(familyMember?.id || 'user-001'),
+        dueDate: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        difficulty: 'easy' as const
+      },
+      {
+        id: 'task-5',
+        title: 'Réviser maths',
+        assignee: 'Clémentine',
+        assigneeId: 'user-003',
+        tribs: 20,
+        status: 'pending' as const,
+        color: ['#FF8A80', '#7986CB'],
+        dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        difficulty: 'medium' as const
+      }
+    ];
+  };
+
+  // 🎯 Fonctions utilitaires (gardées de ton code original)
   const toggleSection = (section: 'thisWeek' | 'later') => {
     setExpandedSections(prev => ({
       ...prev,
@@ -118,7 +175,7 @@ export default function TasksScreen() {
   const completedTasks = tasks.filter(task => task.status === 'completed');
   const totalTribsEarned = completedTasks.reduce((sum, task) => sum + task.tribs, 0);
 
-  // 📂 Organisation des tâches par sections d'urgence
+  // 📂 Organisation des tâches par sections d'urgence (gardée de ton code)
   const organizeTasks = () => {
     const urgent: Task[] = [];
     const thisWeek: Task[] = [];
@@ -137,11 +194,11 @@ export default function TasksScreen() {
       const diffTime = due.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays <= 1) { // En retard, aujourd'hui ou demain
+      if (diffDays <= 1) {
         urgent.push(task);
-      } else if (diffDays <= 6) { // Cette semaine
+      } else if (diffDays <= 6) {
         thisWeek.push(task);
-      } else { // Plus tard
+      } else {
         later.push(task);
       }
     });
@@ -151,24 +208,21 @@ export default function TasksScreen() {
 
   const { urgent, thisWeek, later } = organizeTasks();
 
-  // 📅 Fonction pour afficher la date intelligemment
+  // 📅 Fonction pour afficher la date intelligemment (gardée de ton code)
   const formatCompletedTime = (completedDate?: Date, completedAt?: string) => {
-    if (!completedDate) return completedAt; // Fallback pour les anciennes données
+    if (!completedDate) return completedAt;
     
     const today = new Date();
     const completed = new Date(completedDate);
     
-    // Vérifier si c'est le même jour
     const isToday = today.toDateString() === completed.toDateString();
     
     if (isToday) {
-      // Aujourd'hui : afficher juste l'heure
       return completed.toLocaleTimeString('fr-FR', { 
         hour: '2-digit', 
         minute: '2-digit' 
       });
     } else {
-      // Autre jour : calculer la différence
       const diffTime = today.getTime() - completed.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
@@ -177,11 +231,9 @@ export default function TasksScreen() {
       } else if (diffDays === 2) {
         return 'Avant-hier';
       } else if (diffDays <= 6) {
-        // Cette semaine : jour + "dernier" pour clarifier
         const dayName = completed.toLocaleDateString('fr-FR', { weekday: 'long' });
         return `${dayName} dernier`;
       } else {
-        // Plus ancien : date courte + année si différente
         const currentYear = today.getFullYear();
         const completedYear = completed.getFullYear();
         
@@ -201,7 +253,7 @@ export default function TasksScreen() {
     }
   };
 
-  // 🎯 Fonction pour calculer l'urgence d'une tâche
+  // 🎯 Fonction pour calculer l'urgence d'une tâche (gardée de ton code)
   const getTaskUrgency = (dueDate?: Date) => {
     if (!dueDate) return { text: 'Pas de limite', color: '#718096', emoji: '📋' };
     
@@ -213,7 +265,6 @@ export default function TasksScreen() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
-      // En retard
       const overdueDays = Math.abs(diffDays);
       return { 
         text: overdueDays === 1 ? 'En retard (hier)' : `En retard (${overdueDays}j)`,
@@ -221,17 +272,13 @@ export default function TasksScreen() {
         emoji: '🔥' 
       };
     } else if (diffDays === 0) {
-      // Aujourd'hui
       return { text: 'Aujourd\'hui', color: '#ed8936', emoji: '⚡' };
     } else if (diffDays === 1) {
-      // Demain
       return { text: 'Demain', color: '#ecc94b', emoji: '📅' };
     } else if (diffDays <= 6) {
-      // Cette semaine
       const dayName = due.toLocaleDateString('fr-FR', { weekday: 'long' });
       return { text: dayName, color: '#4a5568', emoji: '📆' };
     } else {
-      // Plus tard
       const dateStr = due.toLocaleDateString('fr-FR', { 
         day: '2-digit', 
         month: '2-digit' 
@@ -241,54 +288,94 @@ export default function TasksScreen() {
   };
 
   // 🎯 Fonction pour marquer une tâche comme terminée
-  const completeTask = (taskId: number) => {
-    const completionDate = new Date();
-    const currentTime = completionDate.toLocaleTimeString('fr-FR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  const completeTask = async (taskId: string) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
 
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId 
-          ? { 
-              ...task, 
-              status: 'completed' as const, 
-              completedAt: currentTime,
-              completedDate: completionDate,
-              dueDate: undefined // Supprimer la deadline
-            }
-          : task
-      )
-    );
+      const completionDate = new Date();
+      const currentTime = completionDate.toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
 
-    // Feedback utilisateur
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
+      // Mettre à jour localement d'abord (UI réactive)
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === taskId 
+            ? { 
+                ...t, 
+                status: 'completed' as const, 
+                completedAt: currentTime,
+                completedDate: completionDate,
+                dueDate: undefined
+              }
+            : t
+        )
+      );
+
+      // Si connecté à Firebase, mettre à jour aussi
+      if (familyId && isAuthenticated) {
+        await tasksService.completeTask(familyId, taskId, familyMember?.id || 'user-001');
+        
+        // Attribution des Tribs
+        if (task.assigneeId && updateTribs) {
+          await updateTribs(task.assigneeId, task.tribs);
+        }
+      }
+
+      // Feedback utilisateur
       Alert.alert(
         '🎉 Tâche terminée !', 
         `${task.assignee} a gagné +${task.tribs} Tribs !`, 
         [{ text: 'Super !', style: 'default' }]
       );
+
+    } catch (error) {
+      console.error('❌ Erreur completion tâche:', error);
+      Alert.alert('❌ Erreur', 'Impossible de marquer la tâche comme terminée');
     }
   };
 
   // 🔄 Fonction pour remettre une tâche en cours
-  const uncompleteTask = (taskId: number) => {
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId 
-          ? { 
-              ...task, 
-              status: 'pending' as const, 
-              completedAt: undefined,
-              completedDate: undefined,
-              dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // Nouvelle deadline demain
-            }
-          : task
-      )
-    );
+  const uncompleteTask = async (taskId: string) => {
+    try {
+      // Mettre à jour localement
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { 
+                ...task, 
+                status: 'pending' as const, 
+                completedAt: undefined,
+                completedDate: undefined,
+                dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000)
+              }
+            : task
+        )
+      );
+
+      // Si connecté à Firebase, mettre à jour aussi
+      if (familyId && isAuthenticated) {
+        await tasksService.uncompleteTask(familyId, taskId);
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur annulation tâche:', error);
+      Alert.alert('❌ Erreur', 'Impossible de remettre la tâche en cours');
+    }
   };
+
+  // 🔄 Si loading
+  if (loading || familyLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement des tâches...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -301,8 +388,11 @@ export default function TasksScreen() {
       >
         <Text style={styles.headerTitle}>✅ Tâches & Tribs</Text>
         <Text style={styles.headerSubtitle}>
-          Famille Questroy • {urgent.length} urgent(es) • {pendingTasks.length} total
+          {familyData?.familyName || 'Famille'} • {urgent.length} urgent(es) • {pendingTasks.length} total
         </Text>
+        {!isAuthenticated && (
+          <Text style={styles.headerMode}>Mode démo - Connectez-vous pour synchroniser</Text>
+        )}
       </LinearGradient>
 
       <ScrollView style={styles.content}>
@@ -372,7 +462,9 @@ export default function TasksScreen() {
             style={styles.addTaskGradient}
           >
             <Text style={styles.addTaskIcon}>+</Text>
-            <Text style={styles.addTaskText}>Ajouter une tâche</Text>
+            <Text style={styles.addTaskText}>
+              {isAuthenticated ? 'Ajouter une tâche' : 'Connectez-vous pour ajouter des tâches'}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
 
@@ -386,6 +478,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  loadingText: {
+    fontSize: 16,
+    color: '#4a5568',
   },
   
   header: {
@@ -407,6 +511,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'white',
     opacity: 0.9,
+  },
+  
+  headerMode: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   
   content: {
