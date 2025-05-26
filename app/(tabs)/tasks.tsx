@@ -1,4 +1,7 @@
-// app/(tabs)/tasks.tsx - Version refactorisée
-import TasksScreen from '../../src/components/tasks/TasksScreen';
+// app/(tabs)/tasks.tsx
+import React from 'react';
+import TasksContainer from '../../src/components/tasks/TasksContainer';
 
-export default TasksScreen;
+export default function TasksTab() {
+  return <TasksContainer />;
+}
