@@ -1,4 +1,4 @@
-// app/(tabs)/_layout.tsx - Avec bouton Home central stylé
+// app/(tabs)/_layout.tsx - Sans auth pour tester d'abord
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
@@ -62,7 +62,7 @@ export default function TabLayout() {
                 <Ionicons name="home" size={28} color="white" />
               </View>
             ),
-            tabBarLabel: () => null, // Pas de texte sous le bouton central
+            tabBarLabel: () => null,
           }}
         />
         <Tabs.Screen
