@@ -1,6 +1,6 @@
-// src/components/family/FamilyMemberCard.tsx - Version corrigée
+// src/components/family/FamilyMemberCard.tsx - Version avec photos et édition
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface FamilyMemberCardProps {
@@ -10,15 +10,22 @@ interface FamilyMemberCardProps {
     role: string;
     age?: number;
     tribs: number;
-    avatar: string;
+    avatar: string; // Emoji de fallback
+    avatarUrl?: string; // URL de la vraie photo
     color: string;
     status?: string;
     tasksCompleted?: number;
     tribsEarned?: number;
   };
+  onEditPress?: () => void;
+  showEditButton?: boolean;
 }
 
-export default function FamilyMemberCard({ member }: FamilyMemberCardProps) {
+export default function FamilyMemberCard({ 
+  member, 
+  onEditPress, 
+  showEditButton = false 
+}: FamilyMemberCardProps) {
   const isOnline = member.status === 'online' || true; // Temporaire : tous en ligne
 
   // Couleurs de gradient basées sur la couleur du membre
@@ -40,10 +47,35 @@ export default function FamilyMemberCard({ member }: FamilyMemberCardProps) {
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
       >
-        {/* Avatar */}
+        {/* Avatar avec photo ou emoji */}
         <View style={styles.avatarContainer}>
-          <Text style={styles.avatar}>{member.avatar}</Text>
+          {member.avatarUrl ? (
+            // 📸 Vraie photo de profil
+            <Image 
+              source={{ uri: member.avatarUrl }} 
+              style={styles.avatarImage}
+              defaultSource={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' }}
+            />
+          ) : (
+            // 😊 Emoji de fallback
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarEmoji}>{member.avatar}</Text>
+            </View>
+          )}
+          
+          {/* Status dot */}
           <View style={[styles.statusDot, { backgroundColor: isOnline ? '#4CAF50' : '#757575' }]} />
+          
+          {/* Bouton d'édition */}
+          {showEditButton && onEditPress && (
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={onEditPress}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.editIcon}>✏️</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Informations membre */}
@@ -97,16 +129,31 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginRight: 15,
   },
-  avatar: {
-    fontSize: 32,
+  
+  // 📸 Styles pour la vraie photo
+  avatarImage: {
     width: 60,
     height: 60,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 30,
-    lineHeight: 60, // Pour centrer verticalement sur iOS
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
+  
+  // 😊 Styles pour l'emoji de fallback
+  avatarFallback: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  avatarEmoji: {
+    fontSize: 32,
+  },
+  
   statusDot: {
     position: 'absolute',
     bottom: 2,
@@ -117,6 +164,30 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'white',
   },
+  
+  // ✏️ Bouton d'édition
+  editButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  editIcon: {
+    fontSize: 12,
+  },
+  
   memberInfo: {
     flex: 1,
   },

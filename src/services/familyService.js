@@ -12,6 +12,23 @@ import { db } from '../config/firebase';
 
 export const familyService = {
   
+  async updateFamily(familyId, updateData) {
+    try {
+      const familyRef = doc(db, 'families', familyId);
+      const dataWithTimestamp = {
+        ...updateData,
+        updatedAt: serverTimestamp()
+      };
+      
+      await updateDoc(familyRef, dataWithTimestamp);
+      console.log('✅ Famille mise à jour avec succès');
+      
+    } catch (error) {
+      console.error('❌ Erreur mise à jour famille:', error);
+      throw error;
+    }
+  },
+
   async createFamily(familyData) {
     try {
       const familyRef = doc(collection(db, 'families'));
@@ -67,6 +84,23 @@ export const familyService = {
       console.error('Erreur écoute famille:', error);
       callback(null, error);
     });
+  },
+
+  async updateFamily(familyId, updateData) {
+    try {
+      const familyRef = doc(db, 'families', familyId);
+      const dataWithTimestamp = {
+        ...updateData,
+        updatedAt: serverTimestamp()
+      };
+      
+      await updateDoc(familyRef, dataWithTimestamp);
+      console.log('✅ Famille mise à jour avec succès');
+      
+    } catch (error) {
+      console.error('❌ Erreur mise à jour famille:', error);
+      throw error;
+    }
   },
 
   async updateMemberTribs(familyId, memberId, tribsChange) {

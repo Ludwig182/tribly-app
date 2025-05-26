@@ -1,20 +1,25 @@
-// src/components/family/FamilyScreen.tsx - Version Firebase corrigée
-import React from 'react';
+// src/components/family/FamilyScreen.tsx - Version avec édition profil
+import React, { useState } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFamily } from '../../hooks/useFamily';
 import FamilyStats from './FamilyStats';
 import FamilyMemberCard from './FamilyMemberCard';
 import FamilySettings from './FamilySettings';
+import EditProfileModal from './EditProfileModal';
 
 const FamilyScreen = () => {
-  // Utiliser les données Firebase au lieu des données locales
+  // 🎯 Hook famille pour les données Firebase
   const { 
     familyData, 
     currentMember,
     stats,
     loading 
   } = useFamily();
+
+  // 🗃️ État pour le modal d'édition
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   if (loading) {
     return (
@@ -23,6 +28,22 @@ const FamilyScreen = () => {
       </View>
     );
   }
+
+  // 🎯 Fonctions pour gérer l'édition
+  const openEditModal = (member) => {
+    setSelectedMember(member);
+    setEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setSelectedMember(null);
+  };
+
+  const handleProfileUpdated = (newAvatarUrl) => {
+    // Le hook useFamily se mettra automatiquement à jour via Firebase
+    console.log('✅ Profil mis à jour, nouvelle URL:', newAvatarUrl);
+  };
 
   // Utiliser les membres depuis Firebase
   const familyMembers = familyData?.members || [];
@@ -58,7 +79,7 @@ const FamilyScreen = () => {
           }} 
         />
 
-        {/* Membres de la famille - Données Firebase */}
+        {/* Membres de la famille - Données Firebase avec boutons d'édition */}
         <View style={styles.membersSection}>
           <Text style={styles.sectionTitle}>Membres de la famille</Text>
           {familyMembers.map((member) => (
@@ -70,6 +91,8 @@ const FamilyScreen = () => {
                 tasksCompleted: Math.floor(Math.random() * 10), // Temporaire
                 tribsEarned: member.tribs || 0
               }}
+              onEditPress={() => openEditModal(member)}
+              showEditButton={true} // Nouvelle prop pour afficher le bouton
             />
           ))}
         </View>
@@ -77,6 +100,15 @@ const FamilyScreen = () => {
         {/* Settings */}
         <FamilySettings />
       </ScrollView>
+
+      {/* Modal d'édition profil */}
+      <EditProfileModal
+        visible={editModalVisible}
+        member={selectedMember}
+        familyId={familyData?.id || 'famille-questroy-test'}
+        onClose={closeEditModal}
+        onSuccess={handleProfileUpdated}
+      />
     </SafeAreaView>
   );
 };
