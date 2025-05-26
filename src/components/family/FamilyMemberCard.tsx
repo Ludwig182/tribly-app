@@ -1,4 +1,4 @@
-// src/components/family/FamilyMemberCard.tsx - Version avec photos et édition
+// src/components/family/FamilyMemberCard.tsx - Version complète avec styles
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,7 +8,7 @@ interface FamilyMemberCardProps {
     id: string;
     name: string;
     role: string;
-    age?: number;
+    birthDate?: string; // Format ISO date
     tribs: number;
     avatar: string; // Emoji de fallback
     avatarUrl?: string; // URL de la vraie photo
@@ -28,6 +28,24 @@ export default function FamilyMemberCard({
 }: FamilyMemberCardProps) {
   const isOnline = member.status === 'online' || true; // Temporaire : tous en ligne
 
+  // 📅 Calcul de l'âge à partir de birthDate
+  const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0;
+    
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return Math.max(0, age);
+  };
+
+  const memberAge = member.birthDate ? calculateAge(member.birthDate) : null;
+
   // Couleurs de gradient basées sur la couleur du membre
   const getGradientColors = (color: string) => {
     const colorMap: { [key: string]: string[] } = {
@@ -35,6 +53,8 @@ export default function FamilyMemberCard({
       '#7986CB': ['#9FA8DA', '#7986CB'], // Violet
       '#FFCC80': ['#FFE0B2', '#FFCC80'], // Orange
       '#81C784': ['#A5D6A7', '#81C784'], // Vert
+      '#48bb78': ['#A5D6A7', '#48bb78'], // Vert foncé
+      '#4299e1': ['#90CDF4', '#4299e1'], // Bleu
     };
     return colorMap[color] || ['#E0E0E0', '#BDBDBD']; // Couleur par défaut
   };
@@ -82,9 +102,11 @@ export default function FamilyMemberCard({
         <View style={styles.memberInfo}>
           <Text style={styles.memberName}>{member.name}</Text>
           <Text style={styles.memberRole}>
-            {member.role === 'parent' 
-              ? (member.name.includes('Rosaly') ? 'Maman' : 'Papa')
-              : `${member.role === 'child' ? (member.name.includes('Clémentine') ? 'Fille' : 'Fils') : member.role} (${member.age} ans)`
+            {member.role === 'admin' 
+              ? 'Administrateur'
+              : member.role === 'parent' 
+                ? 'Parent' 
+                : `Enfant${memberAge ? ` (${memberAge} ans)` : ''}`
             }
           </Text>
           <Text style={styles.statusText}>

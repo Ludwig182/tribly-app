@@ -1,4 +1,4 @@
-// src/components/family/EditProfileModal.tsx
+// src/components/family/EditProfileModal.tsx - Version finale corrigée
 import React, { useState } from 'react';
 import {
   Modal,
@@ -12,124 +12,180 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  TextInput
+  TextInput,
+  ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { storageService } from '../../services/storageService';
+import { familyService } from '../../services/familyService';
 import { useFamily } from '../../hooks/useFamily';
+
+interface Member {
+  id: string;
+  name: string;
+  avatar: string;
+  avatarUrl?: string;
+  role: 'admin' | 'parent' | 'child';
+  birthDate?: string;
+  email?: string;
+  color: string;
+}
 
 interface EditProfileModalProps {
   visible: boolean;
-  member: {
-    id: string;
-    name: string;
-    avatar: string;
-    avatarUrl?: string;
-    role: string;
-    age?: number;
-    color: string;
-  } | null;
+  member: Member | null;
   familyId: string;
+  currentUserId: string; // ID de l'utilisateur connecté
+  familyData: any; // Données famille complètes
   onClose: () => void;
-  onSuccess: (newAvatarUrl: string) => void;
+  onSuccess: () => void;
 }
 
 export default function EditProfileModal({
   visible,
   member,
   familyId,
+  currentUserId,
+  familyData,
   onClose,
   onSuccess
 }: EditProfileModalProps) {
-  // 🗃️ États locaux
+  
+  // 🗃️ États pour les données membre
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
+  const [newBirthDate, setNewBirthDate] = useState<Date | null>(null);
+  const [newRole, setNewRole] = useState<'parent' | 'child'>('child');
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+  const [newEmail, setNewEmail] = useState('');
+  
+  // 🗃️ États UI
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [optimizing, setOptimizing] = useState(false);
-  const [optimizationStats, setOptimizationStats] = useState<{
-    originalSize: number;
-    optimizedSize: number;
-    compressionRatio: number;
-  } | null>(null);
-  const [newName, setNewName] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // 🎯 Hook famille pour actions
-  const { familyData } = useFamily();
+  // 🎨 Palettes de couleurs pour membres
+  const memberColorPalettes = [
+    { name: 'Corail-Violet', colors: ['#FF8A80', '#7986CB'] },
+    { name: 'Pêche-Violet', colors: ['#FFCC80', '#A29BFE'] },
+    { name: 'Vert-Nature', colors: ['#48bb78', '#38a169'] },
+    { name: 'Bleu-Océan', colors: ['#4299e1', '#667eea'] },
+    { name: 'Orange-Sunset', colors: ['#ed8936', '#dd6b20'] },
+    { name: 'Violet-Mystique', colors: ['#9f7aea', '#805ad5'] },
+    { name: 'Rose-Sakura', colors: ['#f093fb', '#f5576c'] },
+    { name: 'Emeraude', colors: ['#11998e', '#38ef7d'] }
+  ];
+
+  // 🔐 Permissions calculées avec useMemo pour re-render automatique
+  const permissions = React.useMemo(() => {
+    if (!member || !familyData) {
+      return {
+        canEditName: false,
+        canEditBirthDate: false,
+        canEditRole: false,
+        canEditEmail: false
+      };
+    }
+
+    const currentUser = familyData.members?.find(m => m.id === currentUserId);
+    const isCurrentUserAdmin = currentUser?.role === 'admin';
+    const isCurrentUserParent = currentUser?.role === 'parent' || currentUser?.role === 'admin';
+    const isEditingSelf = member.id === currentUserId;
+
+    return {
+      canEditName: isCurrentUserAdmin || (isCurrentUserParent && member.role === 'child') || isEditingSelf,
+      canEditBirthDate: isCurrentUserAdmin || (isCurrentUserParent && member.role === 'child') || (isEditingSelf && (member.role === 'parent' || member.role === 'admin')),
+      canEditRole: isCurrentUserAdmin,
+      canEditEmail: isCurrentUserAdmin || (isEditingSelf && (member.role === 'parent' || member.role === 'admin'))
+    };
+  }, [currentUserId, familyData, member]);
+
+  // Extraire les permissions
+  const { canEditName, canEditBirthDate, canEditRole, canEditEmail } = permissions;
+
+  // 📊 Calculs pour règles métier
+  const currentParentsCount = familyData?.members?.filter(m => m.role === 'parent' || m.role === 'admin')?.length || 0;
+  const canChangeToParent = newRole === 'parent' ? currentParentsCount < 2 || member?.role === 'parent' || member?.role === 'admin' : true;
 
   // 🔄 Reset modal quand ouvert
   React.useEffect(() => {
     if (visible && member) {
       setSelectedImage(member.avatarUrl || null);
       setNewName(member.name);
+      setNewBirthDate(member.birthDate ? new Date(member.birthDate) : null);
+      setNewRole(member.role === 'admin' ? 'parent' : member.role as 'parent' | 'child');
+      setNewEmail(member.email || '');
+      
+      // Trouver l'index de couleur actuelle
+      const currentColorIndex = memberColorPalettes.findIndex(
+        palette => palette.colors[0] === member.color
+      );
+      setSelectedColorIndex(currentColorIndex >= 0 ? currentColorIndex : 0);
+      
       setUploadProgress(0);
       setOptimizing(false);
-      setOptimizationStats(null);
+      setSaving(false);
     }
-  }, [visible, member]);
+  }, [visible, member, currentUserId, familyData]);
 
   if (!member) return null;
 
-  // 📸 Demander permissions et ouvrir galerie
+  // 📅 Calcul de l'âge à partir de la date de naissance
+  const calculateAge = (birthDate: Date): number => {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return Math.max(0, age);
+  };
+
+  // 📸 Gestion des images
   const pickImage = async () => {
     try {
-      // Vérifier/demander permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
-          '📱 Permission requise',
-          'Tribly a besoin d\'accéder à vos photos pour changer votre avatar.',
-          [
-            { text: 'Annuler', style: 'cancel' },
-            { text: 'Paramètres', onPress: () => ImagePicker.requestMediaLibraryPermissionsAsync() }
-          ]
-        );
+        Alert.alert('📱 Permission requise', 'Accès aux photos nécessaire pour changer l\'avatar.');
         return;
       }
 
-      // Ouvrir sélecteur d'image
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true, // Crop natif
-        aspect: [1, 1], // Format carré pour avatar
-        quality: 0.8, // Compression automatique
-        allowsMultipleSelection: false
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        
-        // Valider le format
-        if (!storageService.validateImageFormat(imageUri)) {
-          Alert.alert('❌ Format non supporté', 'Veuillez choisir une image JPG, PNG ou WebP.');
-          return;
+        if (storageService.validateImageFormat(result.assets[0].uri)) {
+          setSelectedImage(result.assets[0].uri);
+        } else {
+          Alert.alert('❌ Format non supporté', 'Choisissez une image JPG, PNG ou WebP.');
         }
-
-        setSelectedImage(imageUri);
       }
-
     } catch (error) {
-      console.error('❌ Erreur sélection image:', error);
-      Alert.alert('❌ Erreur', 'Impossible d\'accéder à la galerie photos.');
+      Alert.alert('❌ Erreur', 'Impossible d\'accéder à la galerie.');
     }
   };
 
-  // 📷 Prendre photo avec caméra
   const takePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
-          '📷 Permission requise',
-          'Tribly a besoin d\'accéder à votre caméra pour prendre une photo.',
-        );
+        Alert.alert('📷 Permission requise', 'Accès caméra nécessaire.');
         return;
       }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8
@@ -138,57 +194,93 @@ export default function EditProfileModal({
       if (!result.canceled && result.assets[0]) {
         setSelectedImage(result.assets[0].uri);
       }
-
     } catch (error) {
-      console.error('❌ Erreur prise photo:', error);
       Alert.alert('❌ Erreur', 'Impossible d\'accéder à la caméra.');
     }
   };
 
-  // 🗑️ Supprimer avatar actuel
-  const removeAvatar = () => {
-    Alert.alert(
-      '🗑️ Supprimer la photo',
-      'Êtes-vous sûr de vouloir supprimer votre photo de profil ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Supprimer', 
-          style: 'destructive',
-          onPress: () => setSelectedImage(null)
-        }
-      ]
-    );
+  const showImageOptions = () => {
+    Alert.alert('📸 Photo de profil', 'Comment ajouter une photo ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: '📱 Galerie', onPress: pickImage },
+      { text: '📷 Caméra', onPress: takePhoto }
+    ]);
   };
 
-  // 💾 Sauvegarder les changements
+  // 📅 Gestion DatePicker
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      // Vérifier que la date n'est pas dans le futur
+      const today = new Date();
+      if (selectedDate > today) {
+        Alert.alert('❌ Date invalide', 'La date de naissance ne peut pas être dans le futur.');
+        return;
+      }
+      
+      // Vérifier un âge raisonnable (0-120 ans)
+      const age = calculateAge(selectedDate);
+      if (age > 120) {
+        Alert.alert('❌ Date invalide', 'Veuillez saisir une date de naissance valide.');
+        return;
+      }
+      
+      setNewBirthDate(selectedDate);
+    }
+  };
+
+  // 🛡️ Validation des données
+  const validateData = () => {
+    if (!newName.trim()) {
+      Alert.alert('❌ Nom requis', 'Le nom ne peut pas être vide.');
+      return false;
+    }
+    
+    if (newName.trim().length < 2) {
+      Alert.alert('❌ Nom trop court', 'Le nom doit contenir au moins 2 caractères.');
+      return false;
+    }
+    
+    if (newName.trim().length > 50) {
+      Alert.alert('❌ Nom trop long', 'Le nom ne peut pas dépasser 50 caractères.');
+      return false;
+    }
+    
+    if (!newBirthDate) {
+      Alert.alert('❌ Date de naissance requise', 'Veuillez sélectionner une date de naissance.');
+      return false;
+    }
+    
+    if (newEmail && newEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
+      Alert.alert('❌ Email invalide', 'Veuillez saisir un email valide ou laisser vide.');
+      return false;
+    }
+
+    if (newRole === 'parent' && !canChangeToParent) {
+      Alert.alert('❌ Limite atteinte', 'Maximum 2 parents par famille.');
+      return false;
+    }
+    
+    return true;
+  };
+
+  // 💾 Sauvegarder les modifications
   const saveChanges = async () => {
-    if (uploading || optimizing) return;
-
+    if (!validateData()) return;
+    
+    setSaving(true);
+    
     try {
-      setUploading(true);
       let newAvatarUrl = member.avatarUrl;
-
-      // 1. Gérer l'avatar si changé
+      
+      // 1. Gérer avatar si changé
       if (selectedImage !== member.avatarUrl) {
         if (selectedImage) {
-          // Optimiser l'image avant upload
           setOptimizing(true);
           const { imageOptimizationService } = await import('../../services/imageOptimizationService');
-          
           const optimizedResult = await imageOptimizationService.optimizeAvatar(selectedImage);
-          
           setOptimizing(false);
           
-          if (!optimizedResult.error) {
-            setOptimizationStats({
-              originalSize: optimizedResult.originalSize,
-              optimizedSize: optimizedResult.fileSize,
-              compressionRatio: optimizedResult.compressionRatio
-            });
-          }
-          
-          // Upload de l'image (optimisée ou originale)
           const imageToUpload = optimizedResult.error ? selectedImage : optimizedResult.uri;
           newAvatarUrl = await storageService.uploadAvatar(
             familyId,
@@ -197,62 +289,52 @@ export default function EditProfileModal({
             (progress) => setUploadProgress(progress)
           );
         } else {
-          // Supprimer avatar existant
           await storageService.deleteAvatar(familyId, member.id);
           newAvatarUrl = null;
         }
       }
-
-      // 2. Mettre à jour le nom si changé (optionnel pour cette version)
-      // TODO: Ajouter familyService.updateMemberName() si besoin
-
-      // 3. Callback de succès
-      onSuccess(newAvatarUrl || '');
       
-      const statsMessage = optimizationStats 
-        ? `\n📊 Taille réduite de ${optimizationStats.compressionRatio}%`
-        : '';
+      // 2. Préparer les nouvelles données membre
+      const updatedMemberData = {
+        ...member,
+        name: newName.trim(),
+        birthDate: newBirthDate?.toISOString().split('T')[0], // Format YYYY-MM-DD
+        role: member.role === 'admin' ? 'admin' : newRole, // Admin reste admin
+        email: newEmail.trim() || null,
+        color: memberColorPalettes[selectedColorIndex].colors[0],
+        avatarUrl: newAvatarUrl
+      };
       
-      Alert.alert(
-        '✅ Profil mis à jour !',
-        (selectedImage ? 'Votre nouvelle photo est maintenant visible.' : 'Votre photo a été supprimée.') + statsMessage,
-        [{ text: 'Super !', onPress: onClose }]
-      );
-
+      // 3. Mettre à jour dans Firebase
+      await familyService.updateMember(familyId, member.id, updatedMemberData);
+      
+      Alert.alert('✅ Profil mis à jour !', 'Les modifications ont été sauvegardées.', [
+        { text: 'Super !', onPress: () => { onSuccess(); onClose(); } }
+      ]);
+      
     } catch (error) {
-      console.error('❌ Erreur sauvegarde profil:', error);
-      Alert.alert('❌ Erreur', error.message || 'Impossible de sauvegarder les changements.');
+      console.error('❌ Erreur sauvegarde:', error);
+      Alert.alert('❌ Erreur', error.message || 'Impossible de sauvegarder.');
     } finally {
-      setUploading(false);
+      setSaving(false);
       setOptimizing(false);
       setUploadProgress(0);
-      setOptimizationStats(null);
     }
   };
 
-  // 🎨 Choix d'image : galerie ou caméra
-  const showImageOptions = () => {
-    Alert.alert(
-      '📸 Choisir une photo',
-      'Comment souhaitez-vous ajouter votre photo de profil ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: '📱 Galerie', onPress: pickImage },
-        { text: '📷 Caméra', onPress: takePhoto }
-      ]
-    );
-  };
+  // 🎨 Vérifier s'il y a des changements
+  const hasChanges = 
+    newName.trim() !== member.name ||
+    selectedImage !== member.avatarUrl || 
+    newBirthDate?.toISOString().split('T')[0] !== member.birthDate ||
+    (member.role !== 'admin' && newRole !== member.role) ||
+    (newEmail.trim() || null) !== member.email ||
+    memberColorPalettes[selectedColorIndex].colors[0] !== member.color;
 
-  const hasChanges = selectedImage !== member.avatarUrl || newName !== member.name;
-  const canSave = hasChanges && !uploading && !optimizing;
+  const canSave = hasChanges && !uploading && !optimizing && !saving;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <KeyboardAvoidingView 
         style={styles.modalContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -260,61 +342,52 @@ export default function EditProfileModal({
         <SafeAreaView style={styles.modalContent}>
           {/* Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              style={styles.modalCloseBtn}
-              onPress={onClose}
-              disabled={uploading || optimizing}
-            >
-              <Text style={[styles.modalCloseText, (uploading || optimizing) && styles.disabledText]}>
-                Annuler
-              </Text>
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose}>
+              <Text style={styles.modalCloseText}>Annuler</Text>
             </TouchableOpacity>
             
             <Text style={styles.modalTitle}>✏️ Modifier profil</Text>
             
             <TouchableOpacity 
-              style={[styles.modalSaveBtn, (!canSave) && styles.modalSaveBtnDisabled]}
+              style={[styles.modalSaveBtn, !canSave && styles.modalSaveBtnDisabled]}
               onPress={saveChanges}
               disabled={!canSave}
             >
-              {uploading || optimizing ? (
+              {saving || uploading || optimizing ? (
                 <ActivityIndicator size="small" color="white" />
               ) : (
-                <Text style={[styles.modalSaveText, (!canSave) && styles.modalSaveTextDisabled]}>
+                <Text style={[styles.modalSaveText, !canSave && styles.modalSaveTextDisabled]}>
                   Sauver
                 </Text>
               )}
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
             {/* Section Avatar */}
-            <View style={styles.avatarSection}>
+            <View style={styles.section}>
               <Text style={styles.sectionTitle}>📷 Photo de profil</Text>
               
               <View style={styles.avatarContainer}>
-                {/* Prévisualisation avatar */}
                 <View style={styles.avatarPreview}>
                   {selectedImage ? (
                     <Image source={{ uri: selectedImage }} style={styles.avatarImage} />
                   ) : (
                     <LinearGradient
-                      colors={[member.color, member.color + '80']}
+                      colors={memberColorPalettes[selectedColorIndex].colors}
                       style={styles.avatarFallback}
                     >
                       <Text style={styles.avatarEmoji}>{member.avatar}</Text>
                     </LinearGradient>
                   )}
                   
-                  {/* Badge du rôle */}
                   <View style={styles.roleBadge}>
                     <Text style={styles.roleBadgeText}>
-                      {member.role === 'parent' ? '👑' : '⭐'}
+                      {member.role === 'admin' ? '👑' : member.role === 'parent' ? '👤' : '⭐'}
                     </Text>
                   </View>
                 </View>
 
-                {/* Actions avatar */}
                 <View style={styles.avatarActions}>
                   <TouchableOpacity 
                     style={styles.avatarActionBtn}
@@ -330,7 +403,7 @@ export default function EditProfileModal({
                   {selectedImage && (
                     <TouchableOpacity 
                       style={[styles.avatarActionBtn, styles.removeBtn]}
-                      onPress={removeAvatar}
+                      onPress={() => setSelectedImage(null)}
                       disabled={uploading || optimizing}
                     >
                       <Text style={styles.avatarActionIcon}>🗑️</Text>
@@ -341,69 +414,156 @@ export default function EditProfileModal({
               </View>
             </View>
 
-            {/* Section Info membre */}
-            <View style={styles.infoSection}>
-              <Text style={styles.sectionTitle}>👤 Informations</Text>
+            {/* Section Informations personnelles */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>👤 Informations personnelles</Text>
               
-              <View style={styles.infoCard}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Nom :</Text>
-                  <Text style={styles.infoValue}>{member.name}</Text>
-                </View>
-                
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Rôle :</Text>
-                  <Text style={styles.infoValue}>
-                    {member.role === 'parent' ? 'Parent' : 'Enfant'} 
-                    {member.age && ` (${member.age} ans)`}
+              {/* Nom */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>📝 Nom</Text>
+                <TextInput
+                  style={[styles.textInput, !canEditName && styles.textInputDisabled]}
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder="Nom du membre"
+                  editable={canEditName}
+                  maxLength={50}
+                />
+                {!canEditName && (
+                  <Text style={styles.permissionText}>
+                    Seuls les parents peuvent modifier le nom des enfants
                   </Text>
-                </View>
+                )}
               </View>
+
+              {/* Date de naissance */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>🎂 Date de naissance</Text>
+                <TouchableOpacity
+                  style={[styles.dateButton, !canEditBirthDate && styles.dateButtonDisabled]}
+                  onPress={() => canEditBirthDate && setShowDatePicker(true)}
+                  disabled={!canEditBirthDate}
+                >
+                  <Text style={[styles.dateButtonText, !canEditBirthDate && styles.dateButtonTextDisabled]}>
+                    {newBirthDate 
+                      ? `${newBirthDate.toLocaleDateString('fr-FR')} (${calculateAge(newBirthDate)} ans)`
+                      : 'Sélectionner une date'
+                    }
+                  </Text>
+                  <Text style={styles.dateButtonIcon}>📅</Text>
+                </TouchableOpacity>
+                {!canEditBirthDate && (
+                  <Text style={styles.permissionText}>
+                    Seuls les parents peuvent modifier la date de naissance des enfants
+                  </Text>
+                )}
+              </View>
+
+              {/* Email */}
+              {(member.role === 'parent' || member.role === 'admin') && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>📧 Email</Text>
+                  <TextInput
+                    style={[styles.textInput, !canEditEmail && styles.textInputDisabled]}
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    placeholder="email@exemple.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={canEditEmail}
+                  />
+                  {!canEditEmail && (
+                    <Text style={styles.permissionText}>
+                      Seul l'admin peut modifier les emails
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
 
-            {/* Barre de progression upload */}
-            {uploading && (
-              <View style={styles.progressSection}>
-                <Text style={styles.progressText}>
-                  Upload en cours... {Math.round(uploadProgress)}%
-                </Text>
-                <View style={styles.progressBar}>
-                  <LinearGradient
-                    colors={[member.color, member.color + '80']}
-                    style={[styles.progressFill, { width: `${uploadProgress}%` }]}
-                  />
+            {/* Section Rôle */}
+            {canEditRole && member.role !== 'admin' && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>👑 Rôle dans la famille</Text>
+                
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[styles.roleOption, newRole === 'parent' && styles.roleOptionSelected]}
+                    onPress={() => canChangeToParent && setNewRole('parent')}
+                    disabled={!canChangeToParent}
+                  >
+                    <Text style={styles.roleOptionIcon}>👤</Text>
+                    <Text style={[styles.roleOptionText, newRole === 'parent' && styles.roleOptionTextSelected]}>
+                      Parent
+                    </Text>
+                    {!canChangeToParent && (
+                      <Text style={styles.roleOptionLimit}>(Max atteint)</Text>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.roleOption, newRole === 'child' && styles.roleOptionSelected]}
+                    onPress={() => setNewRole('child')}
+                  >
+                    <Text style={styles.roleOptionIcon}>⭐</Text>
+                    <Text style={[styles.roleOptionText, newRole === 'child' && styles.roleOptionTextSelected]}>
+                      Enfant
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
 
-            {/* Barre d'optimisation */}
-            {optimizing && (
+            {/* Section Couleur */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🎨 Couleur personnelle</Text>
+              
+              <View style={styles.colorSelector}>
+                {memberColorPalettes.map((palette, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[styles.colorOption, selectedColorIndex === index && styles.colorOptionSelected]}
+                    onPress={() => setSelectedColorIndex(index)}
+                  >
+                    <LinearGradient
+                      colors={palette.colors}
+                      style={styles.colorOptionGradient}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.colorName}>
+                {memberColorPalettes[selectedColorIndex].name}
+              </Text>
+            </View>
+
+            {/* Progress bars */}
+            {(uploading || optimizing) && (
               <View style={styles.progressSection}>
                 <Text style={styles.progressText}>
-                  🔄 Optimisation de l'image en cours...
+                  {optimizing ? '🔄 Optimisation...' : `📤 Upload ${Math.round(uploadProgress)}%`}
                 </Text>
                 <View style={styles.progressBar}>
                   <LinearGradient
-                    colors={['#48bb78', '#38a169']}
-                    style={[styles.progressFill, { width: '100%' }]}
+                    colors={memberColorPalettes[selectedColorIndex].colors}
+                    style={[styles.progressFill, { width: optimizing ? '100%' : `${uploadProgress}%` }]}
                   />
                 </View>
               </View>
             )}
+          </ScrollView>
 
-            {/* Stats d'optimisation */}
-            {optimizationStats && (
-              <View style={styles.optimizationStats}>
-                <Text style={styles.statsTitle}>📊 Optimisation réussie</Text>
-                <Text style={styles.statsText}>
-                  Taille réduite de {optimizationStats.compressionRatio}%
-                </Text>
-                <Text style={styles.statsDetail}>
-                  {(optimizationStats.originalSize / 1024).toFixed(0)}KB → {(optimizationStats.optimizedSize / 1024).toFixed(0)}KB
-                </Text>
-              </View>
-            )}
-          </View>
+          {/* DatePicker Modal */}
+          {showDatePicker && (
+            <DateTimePicker
+              value={newBirthDate || new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onDateChange}
+              maximumDate={new Date()}
+              minimumDate={new Date(1900, 0, 1)}
+            />
+          )}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
@@ -437,9 +597,6 @@ const styles = StyleSheet.create({
     color: '#f56565',
     fontWeight: '500',
   },
-  disabledText: {
-    color: '#a0aec0',
-  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -468,9 +625,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  
-  // Section Avatar
-  avatarSection: {
+
+  // Sections
+  section: {
     marginBottom: 30,
   },
   sectionTitle: {
@@ -479,6 +636,8 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     marginBottom: 15,
   },
+
+  // Avatar
   avatarContainer: {
     alignItems: 'center',
   },
@@ -487,10 +646,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   avatarImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
     borderColor: 'white',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -499,12 +658,12 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   avatarFallback: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: 'white',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -513,15 +672,15 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   avatarEmoji: {
-    fontSize: 48,
+    fontSize: 40,
   },
   roleBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    bottom: 5,
+    right: 5,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
@@ -529,7 +688,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   roleBadgeText: {
-    fontSize: 16,
+    fontSize: 14,
   },
   avatarActions: {
     flexDirection: 'row',
@@ -551,7 +710,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef5f5',
   },
   avatarActionIcon: {
-    fontSize: 20,
+    fontSize: 18,
     marginBottom: 4,
   },
   avatarActionText: {
@@ -559,35 +718,130 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#4a5568',
   },
-  
-  // Section Info
-  infoSection: {
+
+  // Inputs
+  inputGroup: {
     marginBottom: 20,
   },
-  infoCard: {
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 8,
+  },
+  textInput: {
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#2d3748',
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  infoRow: {
+  textInputDisabled: {
+    backgroundColor: '#f7fafc',
+    color: '#a0aec0',
+  },
+  dateButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  infoLabel: {
-    fontSize: 14,
-    color: '#4a5568',
-    fontWeight: '500',
+  dateButtonDisabled: {
+    backgroundColor: '#f7fafc',
   },
-  infoValue: {
-    fontSize: 14,
+  dateButtonText: {
+    fontSize: 16,
     color: '#2d3748',
+  },
+  dateButtonTextDisabled: {
+    color: '#a0aec0',
+  },
+  dateButtonIcon: {
+    fontSize: 18,
+  },
+  permissionText: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+
+  // Role selector
+  roleSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  roleOption: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  roleOptionSelected: {
+    borderColor: '#48bb78',
+    backgroundColor: '#f0fff4',
+  },
+  roleOptionIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  roleOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4a5568',
+  },
+  roleOptionTextSelected: {
+    color: '#48bb78',
     fontWeight: '600',
   },
-  
-  // Progression
+  roleOptionLimit: {
+    fontSize: 10,
+    color: '#f56565',
+    marginTop: 2,
+  },
+
+  // Color selector
+  colorSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 12,
+  },
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 2,
+  },
+  colorOptionSelected: {
+    borderColor: '#2d3748',
+    borderWidth: 3,
+  },
+  colorOptionGradient: {
+    flex: 1,
+    borderRadius: 22,
+  },
+  colorName: {
+    fontSize: 14,
+    color: '#4a5568',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+  // Progress
   progressSection: {
     marginTop: 20,
     padding: 16,
@@ -611,33 +865,5 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
-  },
-  
-  // Stats optimisation
-  optimizationStats: {
-    marginTop: 15,
-    padding: 12,
-    backgroundColor: '#f0fff4',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#48bb78',
-  },
-  statsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#48bb78',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  statsText: {
-    fontSize: 13,
-    color: '#2d3748',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  statsDetail: {
-    fontSize: 11,
-    color: '#4a5568',
-    textAlign: 'center',
   },
 });

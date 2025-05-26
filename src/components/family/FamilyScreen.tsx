@@ -1,4 +1,4 @@
-// src/components/family/FamilyScreen.tsx - Version avec édition profil
+// src/components/family/FamilyScreen.tsx - Version corrigée complète
 import React, { useState } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,9 +40,9 @@ const FamilyScreen = () => {
     setSelectedMember(null);
   };
 
-  const handleProfileUpdated = (newAvatarUrl) => {
+  const handleProfileUpdated = () => {
     // Le hook useFamily se mettra automatiquement à jour via Firebase
-    console.log('✅ Profil mis à jour, nouvelle URL:', newAvatarUrl);
+    console.log('✅ Profil mis à jour avec succès');
   };
 
   // Utiliser les membres depuis Firebase
@@ -63,7 +63,7 @@ const FamilyScreen = () => {
             <Text style={styles.familyIconText}>👥</Text>
           </View>
           <View>
-            <Text style={styles.familyName}>Famille {familyData?.name || 'Questroy'}</Text>
+            <Text style={styles.familyName}>Famille {familyData?.familyName || familyData?.name || 'Questroy'}</Text>
             <Text style={styles.membersCount}>{onlineMembers}/{familyMembers.length} membres connectés</Text>
           </View>
         </View>
@@ -92,7 +92,7 @@ const FamilyScreen = () => {
                 tribsEarned: member.tribs || 0
               }}
               onEditPress={() => openEditModal(member)}
-              showEditButton={true} // Nouvelle prop pour afficher le bouton
+              showEditButton={true} // Afficher le bouton d'édition
             />
           ))}
         </View>
@@ -101,11 +101,13 @@ const FamilyScreen = () => {
         <FamilySettings />
       </ScrollView>
 
-      {/* Modal d'édition profil */}
+      {/* Modal d'édition profil étendu */}
       <EditProfileModal
         visible={editModalVisible}
         member={selectedMember}
         familyId={familyData?.id || 'famille-questroy-test'}
+        currentUserId={currentMember?.id || 'user-001'} // ID utilisateur connecté
+        familyData={familyData} // Données complètes famille
         onClose={closeEditModal}
         onSuccess={handleProfileUpdated}
       />
