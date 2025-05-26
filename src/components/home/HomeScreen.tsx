@@ -1,4 +1,4 @@
-// src/components/home/HomeScreen.tsx
+// src/components/home/HomeScreen.tsx - Version complète avec authentification
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,47 +10,90 @@ import FamilyActivity from './FamilyActivity';
 import AISuggestion from './AISuggestion';
 import QuickActions from './QuickActions';
 
+// Import des hooks
+import { useAuth } from '../../hooks/useAuth';
+import { useFamily } from '../../hooks/useFamily';
+
 export default function HomeScreen() {
-  // Données famille Ludwig
-  const familyData = {
-    members: [
-      { name: 'Rosaly', initial: 'R', color: ['#FF8A80', '#7986CB'], online: true },
-      { name: 'Ludwig', initial: 'L', color: ['#48bb78', '#38a169'], online: false },
-      { name: 'Clémentine', initial: 'C', color: ['#FFCC80', '#A29BFE'], online: true },
-      { name: 'Jacob', initial: 'J', color: ['#FF8A80', '#FFCC80'], online: true }
-    ],
-    parent: 'Rosaly',
-    familyName: 'Famille Questroy',
-    children: [
-      {
-        name: 'Clémentine',
-        age: 12,
-        emoji: '🌸',
-        tribs: 235,
-        maxTribs: 300,
-        streak: 5,
-        status: '🔥 Série de 5 jours',
-        nextReward: '🎬 Sortie cinéma dans 15 Tribs',
-        color: ['#FF8A80', '#7986CB']
-      },
-      {
-        name: 'Jacob',
-        age: 8,
-        tribs: 180,
-        maxTribs: 250,
-        streak: 3,
-        status: '📚 Bonne note maths !',
-        nextReward: '🎮 Temps d\'écran bonus dans 70 Tribs',
-        color: ['#FFCC80', '#A29BFE']
-      }
-    ],
+  // 🔐 Données d'authentification
+  const { userName, familyMember, userRole, isAuthenticated } = useAuth();
+  
+  // 👥 Données famille
+  const { familyData, currentMember, stats, familyName, loading } = useFamily();
+
+  // 📊 Construire les données pour les composants (avec fallback)
+  const familyMembers = familyData?.members || [];
+  
+  // 🎯 Fonctions utilitaires
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return 12; // Fallback
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return Math.max(0, age);
+  };
+
+  const getRandomStatus = () => {
+    const statuses = [
+      '🔥 Série active !',
+      '📚 Super week !',
+      '⭐ En forme !',
+      '🎯 Concentré(e)',
+      '💪 Motivé(e)'
+    ];
+    return statuses[Math.floor(Math.random() * statuses.length)];
+  };
+
+  const getNextReward = (currentTribs) => {
+    const rewards = [
+      { threshold: 50, reward: '🍦 Glace bonus' },
+      { threshold: 100, reward: '🎮 Temps d\'écran +30min' },
+      { threshold: 200, reward: '🎬 Sortie cinéma' },
+      { threshold: 300, reward: '🎪 Parc d\'attractions' }
+    ];
+    
+    const nextReward = rewards.find(r => currentTribs < r.threshold);
+    if (nextReward) {
+      const remaining = nextReward.threshold - currentTribs;
+      return `${nextReward.reward} dans ${remaining} Tribs`;
+    }
+    return '🏆 Champion ! Nouveaux défis bientôt';
+  };
+
+  const displayData = {
+    members: familyMembers.map(member => ({
+      name: member.name,
+      initial: member.name[0],
+      color: member.color ? [member.color, member.color] : ['#FF8A80', '#7986CB'],
+      online: member.status === 'online' || true
+    })),
+    parent: userName || currentMember?.name || 'Utilisateur',
+    familyName: familyName || 'Famille',
+    children: familyMembers
+      .filter(member => member.role === 'child')
+      .map(child => ({
+        name: child.name,
+        age: child.birthDate ? calculateAge(child.birthDate) : 12, // Fallback age
+        emoji: child.avatar || '😊',
+        tribs: child.tribs || 0,
+        maxTribs: 300, // TODO: Configurable per child
+        streak: Math.floor(Math.random() * 7) + 1, // TODO: Calculate real streak
+        status: getRandomStatus(),
+        nextReward: getNextReward(child.tribs || 0),
+        color: child.color ? [child.color, child.color] : ['#FF8A80', '#7986CB']
+      })),
     familyGoal: {
-      current: 415,
+      current: stats.totalTribs || 0,
       target: 500,
       reward: '🎢 Parc d\'attractions',
-      remaining: 85
+      remaining: Math.max(0, 500 - (stats.totalTribs || 0))
     },
     priorities: [
+      // TODO: Intégrer avec système de calendrier/tâches
       { time: '15:30', title: 'Dentiste Clémentine', details: 'Dr. Martin • Emmener Clémentine', urgent: true },
       { time: '18:00', title: 'Préparer dîner', details: 'Menu: Pâtes bolognaise • 4 personnes', urgent: false }
     ],
@@ -69,21 +112,21 @@ export default function HomeScreen() {
     },
     {
       title: 'Tâches',
-      subtitle: '3 à faire',
+      subtitle: `${stats.tasks.todo || 0} à faire`,
       emoji: '✅',
       colors: ['#48bb78', '#38a169'],
       onPress: () => console.log('Navigate to Tasks')
     },
     {
       title: 'Courses',
-      subtitle: '8 articles',
+      subtitle: `${stats.shopping.toBuy || 0} articles`,
       emoji: '🛒',
       colors: ['#FFCC80', '#A29BFE'],
       onPress: () => console.log('Navigate to Shopping')
     },
     {
       title: 'Famille',
-      subtitle: '4 membres',
+      subtitle: `${stats.totalMembers || 0} membres`,
       emoji: '👨‍👩‍👧‍👦',
       colors: ['#7986CB', '#FF8A80'],
       onPress: () => console.log('Navigate to Family')
@@ -96,6 +139,17 @@ export default function HomeScreen() {
     if (hour < 18) return 'Bon après-midi';
     return 'Bonsoir';
   };
+
+  // 🔄 Si loading, afficher loading
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -113,8 +167,8 @@ export default function HomeScreen() {
                 <Text style={styles.logoEmoji}>👨‍👩‍👧‍👦</Text>
               </View>
               <View>
-                <Text style={styles.welcomeTitle}>{getGreeting()} {familyData.parent} !</Text>
-                <Text style={styles.welcomeSubtitle}>{familyData.familyName} • 4 membres</Text>
+                <Text style={styles.welcomeTitle}>{getGreeting()} {displayData.parent} !</Text>
+                <Text style={styles.welcomeSubtitle}>{displayData.familyName} • {stats.totalMembers || 0} membres</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.profileBtn}>
@@ -126,24 +180,24 @@ export default function HomeScreen() {
         <View style={styles.content}>
           {/* Tableau des Tribs */}
           <TribsOverview 
-            children={familyData.children}
-            familyGoal={familyData.familyGoal}
+            children={displayData.children}
+            familyGoal={displayData.familyGoal}
           />
 
           {/* Mes priorités aujourd'hui */}
-          <PrioritiesList priorities={familyData.priorities} />
+          <PrioritiesList priorities={displayData.priorities} />
 
           {/* Famille en action */}
           <FamilyActivity 
-            activities={familyData.familyActivity}
-            members={familyData.members}
+            activities={displayData.familyActivity}
+            members={displayData.members}
           />
 
           {/* Suggestion IA Premium */}
           <AISuggestion
-            suggestion="Jacob peut aider Clémentine avec la vaisselle = +30 Tribs famille. Plus que 55 Tribs pour le parc !"
-            actionText="Suggérer à Jacob"
-            onActionPress={() => console.log('Suggestion envoyée à Jacob')}
+            suggestion="Système intelligent activé ! Connectez-vous avec vos tâches pour des suggestions personnalisées."
+            actionText="Découvrir"
+            onActionPress={() => console.log('Navigate to Tasks')}
           />
 
           {/* Actions rapides */}
@@ -161,6 +215,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  loadingText: {
+    fontSize: 16,
+    color: '#4a5568',
   },
   
   header: {

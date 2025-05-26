@@ -1,250 +1,173 @@
-// src/hooks/useAuth.js - Hook Authentication global Expo + Firebase Web SDK  
+// src/hooks/useAuth.js - Version ultra-minimale
 import { useState, useEffect, useContext, createContext } from 'react';
-import * as Google from 'expo-auth-session/providers/google';
-import { authService } from '../services/authService';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  console.log('🔄 AuthProvider démarré (version minimale)');
+  
   // 🗃️ États d'authentification
   const [user, setUser] = useState(null);                    // Firebase User
   const [familyMember, setFamilyMember] = useState(null);    // Membre de la famille
   const [familyId, setFamilyId] = useState(null);            // ID famille actuelle
-  const [loading, setLoading] = useState(true);              // Chargement actions
+  const [loading, setLoading] = useState(false);             // Chargement actions
   const [initializing, setInitializing] = useState(true);    // Initialisation Firebase
   const [error, setError] = useState(null);
 
-  // 📱 Configuration Google Auth Request (Expo Hook)
-  const [googleAuthRequest, googleAuthResponse, promptGoogleAsync] = Google.useAuthRequest(
-    authService.getGoogleAuthConfig()
-  );
-
-  // 🔄 Effet pour traiter la réponse Google Auth
+  // 🔄 Initialisation simplifiée (pas de Firebase Auth pour l'instant)
   useEffect(() => {
-    if (googleAuthResponse) {
-      handleGoogleAuthResponse();
-    }
-  }, [googleAuthResponse]);
-
-  // 🔄 Fonction appelée quand l'état d'auth Firebase change
-  const onAuthStateChanged = async (firebaseUser) => {
-    console.log('🔄 AuthState changed:', firebaseUser ? firebaseUser.email : 'Déconnecté');
+    console.log('🚀 Initialisation useAuth minimal...');
     
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (firebaseUser) {
-        // Utilisateur connecté → récupérer/créer profil famille
-        const familyData = await authService.getOrCreateFamilyMember(firebaseUser);
-        
-        setUser(firebaseUser);
-        setFamilyMember(familyData.member);
-        setFamilyId(familyData.familyId);
-        
-        console.log('✅ Utilisateur authentifié:', familyData.member.name);
-        
-      } else {
-        // Utilisateur déconnecté → clear state
-        setUser(null);
-        setFamilyMember(null);
-        setFamilyId(null);
-        
-        console.log('✅ Utilisateur déconnecté');
-      }
-      
-    } catch (error) {
-      console.error('❌ Erreur AuthState:', error);
-      setError(error.message);
-      
-      // En cas d'erreur, déconnecter proprement
-      setUser(null);
-      setFamilyMember(null);
-      setFamilyId(null);
-      
-    } finally {
-      setLoading(false);
-      if (initializing) setInitializing(false);
-    }
-  };
-
-  // 🔄 Traiter la réponse Google Auth
-  const handleGoogleAuthResponse = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('🔄 Traitement réponse Google Auth...');
-      
-      const result = await authService.signInWithGoogle(googleAuthRequest, googleAuthResponse);
-      
-      // L'état sera mis à jour automatiquement via onAuthStateChanged
-      console.log('✅ Connexion Google traitée');
-      
-      return result;
-      
-    } catch (error) {
-      console.error('❌ Erreur traitement Google Auth:', error);
-      setError(error.message);
-      setLoading(false);
-    }
-  };
-
-  // 🚀 Initialisation du hook
-  useEffect(() => {
-    console.log('🚀 Initialisation useAuth...');
+    // Simuler l'initialisation
+    setTimeout(() => {
+      setInitializing(false);
+      console.log('✅ Initialisation terminée');
+    }, 1000);
     
-    // 1. Initialiser Firebase Auth
-    authService.initialize();
-    
-    // 2. Écouter les changements d'authentification Firebase
-    const unsubscribe = authService.onAuthStateChanged(onAuthStateChanged);
-    
-    // 3. Cleanup function
-    return () => {
-      console.log('🧹 Cleanup useAuth');
-      unsubscribe();
-    };
   }, []);
 
-  // 🔐 ACTIONS D'AUTHENTIFICATION
+  // 🔐 ACTIONS D'AUTHENTIFICATION (version ultra-minimale)
   const authActions = {
     
-    // 🔑 Connexion Google (déclenche le flow Expo)
-    signInWithGoogle: async () => {
+    // 🧪 Mode test (connexion bypass pour développement)
+    signInTestMode: async (testUserName = 'Ludwig Test') => {
+      console.log('🧪 Mode test activé:', testUserName);
+      
+      setLoading(true);
+      
       try {
-        setError(null);
+        // Simuler un délai
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        console.log('🔄 Déclenchement connexion Google...');
+        // Simuler un utilisateur Firebase pour les tests
+        const mockUser = {
+          uid: 'test-user-001',
+          email: 'ludwig.test@tribly.com',
+          displayName: testUserName,
+          emailVerified: true
+        };
+
+        // Simuler un membre famille
+        const mockMember = {
+          id: 'user-001',
+          name: testUserName,
+          email: mockUser.email,
+          role: 'admin',
+          avatar: '👤',
+          color: '#7986CB',
+          tribs: 0
+        };
+
+        setUser(mockUser);
+        setFamilyMember(mockMember);
+        setFamilyId('famille-questroy-test');
         
-        if (!googleAuthRequest) {
-          throw new Error('Requête Google Auth non prête');
-        }
-        
-        // Déclencher le flow OAuth Google via Expo
-        await promptGoogleAsync();
-        
-        // La suite sera traitée dans handleGoogleAuthResponse
-        console.log('✅ Flow Google Auth déclenché');
+        console.log('✅ Mode test connecté:', testUserName);
         
       } catch (error) {
-        console.error('❌ Erreur déclenchement Google:', error);
+        console.error('❌ Erreur mode test:', error);
         setError(error.message);
         throw error;
+      } finally {
+        setLoading(false);
       }
     },
-    
-    // 📧 Connexion Email
+
+    // 📧 Connexion Email (version simplifiée)
     signInWithEmail: async (email, password) => {
+      console.log('🔄 Connexion email:', email);
+      
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
-        setError(null);
+        // Importer authService dynamiquement pour éviter les erreurs au démarrage
+        const { authService } = await import('../services/authService');
         
-        console.log('🔄 Tentative connexion email...');
         const result = await authService.signInWithEmail(email, password);
         
-        console.log('✅ Connexion email initiée');
+        if (result.user) {
+          // Récupérer les données famille
+          const familyData = await authService.getOrCreateFamilyMember(result.user);
+          
+          setUser(result.user);
+          setFamilyMember(familyData.member);
+          setFamilyId(familyData.familyId);
+          
+          console.log('✅ Connexion email réussie:', familyData.member.name);
+        }
+        
         return result;
         
       } catch (error) {
         console.error('❌ Erreur connexion email:', error);
         setError(error.message);
-        setLoading(false);
-        throw error;
-      }
-    },
-    
-    // 📝 Inscription Email
-    signUpWithEmail: async (email, password, displayName) => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('🔄 Tentative inscription email...');
-        const result = await authService.signUpWithEmail(email, password, displayName);
-        
-        console.log('✅ Inscription email initiée');
-        return result;
-        
-      } catch (error) {
-        console.error('❌ Erreur inscription email:', error);
-        setError(error.message);
-        setLoading(false);
-        throw error;
-      }
-    },
-    
-    // 🚪 Déconnexion
-    signOut: async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('🔄 Déconnexion...');
-        await authService.signOut();
-        
-        // L'état sera mis à jour automatiquement via onAuthStateChanged
-        console.log('✅ Déconnexion initiée');
-        
-      } catch (error) {
-        console.error('❌ Erreur déconnexion:', error);
-        setError(error.message);
-        setLoading(false);
-        throw error;
-      }
-    },
-    
-    // 👥 Rejoindre famille avec code
-    joinFamilyWithCode: async (familyCode) => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('🔄 Rejoindre famille:', familyCode);
-        
-        if (!user) {
-          throw new Error('Utilisateur non connecté');
-        }
-        
-        const newFamilyId = await authService.joinFamilyWithCode(familyCode);
-        
-        // Re-initialiser avec la nouvelle famille
-        const familyData = await authService.getOrCreateFamilyMember(user, newFamilyId);
-        
-        setFamilyMember(familyData.member);
-        setFamilyId(familyData.familyId);
-        
-        console.log('✅ Famille rejointe:', newFamilyId);
-        
-        return familyData;
-        
-      } catch (error) {
-        console.error('❌ Erreur rejoindre famille:', error);
-        setError(error.message);
-        setLoading(false);
         throw error;
       } finally {
         setLoading(false);
       }
     },
     
-    // 🔄 Rafraîchir profil membre
-    refreshFamilyMember: async () => {
+    // 📝 Inscription Email (version simplifiée)
+    signUpWithEmail: async (email, password, displayName) => {
+      console.log('🔄 Inscription email:', email);
+      
+      setLoading(true);
+      setError(null);
+      
       try {
-        if (!user || !familyId) {
-          throw new Error('Utilisateur ou famille non défini');
+        // Importer authService dynamiquement
+        const { authService } = await import('../services/authService');
+        
+        const result = await authService.signUpWithEmail(email, password, displayName);
+        
+        if (result.user) {
+          // Récupérer les données famille
+          const familyData = await authService.getOrCreateFamilyMember(result.user);
+          
+          setUser(result.user);
+          setFamilyMember(familyData.member);
+          setFamilyId(familyData.familyId);
+          
+          console.log('✅ Inscription email réussie:', familyData.member.name);
         }
         
-        const familyData = await authService.getOrCreateFamilyMember(user, familyId);
-        setFamilyMember(familyData.member);
-        
-        console.log('✅ Profil membre rafraîchi');
-        return familyData.member;
+        return result;
         
       } catch (error) {
-        console.error('❌ Erreur rafraîchissement membre:', error);
+        console.error('❌ Erreur inscription email:', error);
         setError(error.message);
         throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    
+    // 🚪 Déconnexion
+    signOut: async () => {
+      console.log('🔄 Déconnexion...');
+      
+      setLoading(true);
+      
+      try {
+        // Si on est en mode test, juste clear les états
+        if (user?.uid === 'test-user-001') {
+          setUser(null);
+          setFamilyMember(null);
+          setFamilyId(null);
+          console.log('✅ Déconnexion mode test');
+        } else {
+          // Sinon utiliser Firebase Auth
+          const { authService } = await import('../services/authService');
+          await authService.signOut();
+        }
+        
+      } catch (error) {
+        console.error('❌ Erreur déconnexion:', error);
+        setError(error.message);
+        throw error;
+      } finally {
+        setLoading(false);
       }
     },
     
@@ -273,10 +196,6 @@ export const AuthProvider = ({ children }) => {
     isAdmin: familyMember?.role === 'admin',
     isParent: familyMember?.role === 'admin' || familyMember?.role === 'parent',
     
-    // États Google Auth
-    googleAuthRequest,      // Requête Google Auth (Expo)
-    googleAuthResponse,     // Réponse Google Auth (Expo)
-    
     // Infos utilisateur faciles d'accès
     userEmail: user?.email || null,
     userName: familyMember?.name || user?.displayName || null,
@@ -287,6 +206,8 @@ export const AuthProvider = ({ children }) => {
     // Actions
     ...authActions
   };
+
+  console.log('🔄 AuthProvider render, isAuthenticated:', authState.isAuthenticated, 'initializing:', initializing);
 
   return (
     <AuthContext.Provider value={authState}>

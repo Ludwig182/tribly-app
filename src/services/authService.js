@@ -1,104 +1,58 @@
-// src/services/authService.js - Service Firebase Web SDK + Expo Auth Session
+// src/services/authService.js - Version minimale sans expo-auth-session
 import { initializeApp } from 'firebase/app';
 import { 
-  getAuth, 
-  signInWithCredential, 
-  GoogleAuthProvider, 
+  initializeAuth,
+  getReactNativePersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { familyService } from './familyService';
-
-// 🔧 Configuration nécessaire pour expo-auth-session
-WebBrowser.maybeCompleteAuthSession();
 
 export const authService = {
   
-  // 🔥 Instance Firebase (utilise la config existante de ton firebase.js)
+  // 🔥 Instance Firebase
   app: null,
   auth: null,
 
-  // 🚀 Initialisation (à appeler au démarrage)
+  // 🚀 Initialisation avec AsyncStorage persistence
   initialize() {
     if (!this.app) {
-      // Utiliser la même config que ton firebase.js existant
-      const firebaseConfig = {
-        apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-      };
-
-      this.app = initializeApp(firebaseConfig);
-      this.auth = getAuth(this.app);
+      console.log('🔄 Initialisation Firebase Auth avec persistence...');
       
-      console.log('✅ Firebase Auth Web SDK initialisé');
+      try {
+        // Utiliser la même config que firebase.js
+        const firebaseConfig = {
+          apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+          authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+        };
+
+        this.app = initializeApp(firebaseConfig, 'auth-app');
+        
+        // 🗃️ Initialiser Auth avec AsyncStorage persistence
+        this.auth = initializeAuth(this.app, {
+          persistence: getReactNativePersistence(AsyncStorage)
+        });
+        
+        console.log('✅ Firebase Auth initialisé avec persistence AsyncStorage');
+        
+      } catch (error) {
+        console.error('❌ Erreur init Firebase Auth:', error);
+        // Fallback sans persistence
+        const { getAuth } = require('firebase/auth');
+        this.auth = getAuth(this.app);
+        console.log('⚠️ Firebase Auth initialisé sans persistence');
+      }
     }
     
     return this.auth;
-  },
-
-  // 📱 Configuration Google Auth (pour le hook useAuth)
-  getGoogleAuthConfig() {
-    return {
-      expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
-      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-      androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      scopes: ['profile', 'email'],
-      responseType: 'code',
-    };
-  },
-
-  // 🔐 CONNEXION GOOGLE (Expo Auth Session + Firebase)
-  async signInWithGoogle(authRequest, authResponse) {
-    try {
-      console.log('🔄 Démarrage connexion Google...');
-      
-      if (!this.auth) this.initialize();
-      
-      if (authResponse?.type !== 'success') {
-        throw new Error('Connexion Google annulée ou échouée');
-      }
-
-      // 1. Échanger le code d'autorisation contre un token
-      const tokenResponse = await Google.exchangeCodeAsync(
-        {
-          clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-          code: authResponse.params.code,
-          extraParams: {},
-          redirectUri: authRequest.redirectUri,
-        },
-        Google.Discovery
-      );
-
-      // 2. Créer un credential Firebase avec le token Google
-      const credential = GoogleAuthProvider.credential(
-        tokenResponse.idToken,
-        tokenResponse.accessToken
-      );
-
-      // 3. Se connecter à Firebase avec le credential
-      const userCredential = await signInWithCredential(this.auth, credential);
-      
-      console.log('✅ Connexion Google réussie:', userCredential.user.email);
-      
-      return {
-        user: userCredential.user,
-        tokenResponse: tokenResponse
-      };
-      
-    } catch (error) {
-      console.error('❌ Erreur connexion Google:', error);
-      throw this.handleAuthError(error);
-    }
   },
 
   // 📧 CONNEXION EMAIL/PASSWORD
@@ -221,6 +175,7 @@ export const authService = {
         role: family.members?.length === 0 ? 'admin' : 'child', // Premier utilisateur = admin
         avatar: '👤',
         color: '#7986CB',
+        tribs: 0,
         joinedAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
         invitedBy: null,
@@ -276,20 +231,16 @@ export const authService = {
       'auth/network-request-failed': 'Erreur réseau',
       'auth/invalid-credential': 'Identifiants invalides',
       
-      // Erreurs Google OAuth
-      'access_denied': 'Accès refusé par l\'utilisateur',
-      'invalid_request': 'Requête invalide',
-      
       // Erreurs génériques
       'default': error.message || 'Erreur d\'authentification inconnue'
     };
     
-    const friendlyMessage = errorMap[error.code] || errorMap[error.error] || errorMap['default'];
+    const friendlyMessage = errorMap[error.code] || errorMap['default'];
     
     return new Error(friendlyMessage);
   },
 
-  // 🧪 MÉTHODES DE DEBUG/TEST
+  // 🧪 MÉTHODES DE DEBUG/TEST  
   async debugCurrentAuth() {
     console.log('🔍 === DEBUG AUTHENTIFICATION ===');
     
