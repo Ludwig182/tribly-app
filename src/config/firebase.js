@@ -7,6 +7,8 @@ import {
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { getFirestore } from 'firebase/firestore';
+
 const firebaseConfig = {
   apiKey: '…',
   authDomain: 'tribly-fd1d8.firebaseapp.com',
@@ -17,6 +19,7 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);     // ← instance Firestore partagée
 
 /* Auth unique avec persistance AsyncStorage */
 export const auth = initializeAuth(app, {
