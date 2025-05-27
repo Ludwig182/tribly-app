@@ -21,32 +21,41 @@ export const FamilyProvider = ({ children }) => {
 
   // 🔗 Hook pour se connecter à l'auth (si disponible)
   useEffect(() => {
-    // Tenter d'importer useAuth de manière conditionnelle
     const tryConnectAuth = async () => {
       try {
         const { useAuth } = await import('./useAuth');
         const authContext = useAuth();
-        
+
         if (authContext) {
           const { familyId: authFamilyId, familyMember, isAuthenticated } = authContext;
-          
+
           if (isAuthenticated && authFamilyId && familyMember) {
-            console.log('🔗 Connexion auth réussie:', familyMember.name);
+            console.log('🔗 Connexion auth réussie :', {
+              name: familyMember.name,
+              email: familyMember.email,
+              firebaseUid: familyMember.firebaseUid,
+              id: familyMember.id,
+              role: familyMember.role
+            });
             setFamilyId(authFamilyId);
             setCurrentMember(familyMember);
             setAuthenticatedUser(familyMember);
             return;
+          } else {
+            console.log('⚠️ AuthContext présent mais incomplet → fallback test');
           }
+        } else {
+          console.log('⚠️ AuthContext absent → fallback test');
         }
       } catch (error) {
+        console.log('❌ Erreur dans tryConnectAuth:', error);
         console.log('⚠️ Auth non disponible, utilisation mode test');
       }
-      
+
       // 🧪 Fallback : mode test avec données statiques
       console.log('🧪 Mode test activé');
       setFamilyId('famille-questroy-test');
-      
-      // Utiliser Rosaly comme utilisateur par défaut
+
       const defaultMember = {
         id: 'user-002',
         name: 'Rosaly',

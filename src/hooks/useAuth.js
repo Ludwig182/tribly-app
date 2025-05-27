@@ -23,7 +23,9 @@ export const AuthProvider = ({ children }) => {
 
   /** Écoute Firebase – persiste entre relances grâce à AsyncStorage */
   useEffect(() => {
+    console.log('🚀 Initialisation useAuth');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('🧩 [onAuthStateChanged] firebaseUser:', firebaseUser);
       if (firebaseUser) {
         // Récupère ou crée le membre dans la famille
         const { authService } = await import('../services/authService');
