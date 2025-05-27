@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,8 +7,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider, useAuth } from '@/src/hooks/useAuth';
-import AuthTestScreen from '@/src/components/auth/AuthTestScreen';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import AuthTestScreen from '@/components/auth/AuthTestScreen';
+
+import ThemeProvider from '@/theme/ThemeProvider';   // ← ton provider adaptatif
 
 // 🎯 Composant App principal avec logique auth
 function AppContent() {
@@ -19,41 +21,36 @@ function AppContent() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  if (!loaded) {
-    return null; // Async font loading
-  }
+  if (!loaded) return null; // Chargement des polices
 
-  // 🔄 Loading screen pendant l'initialisation Firebase
+  // 🔄 Écran de chargement (init Firebase)
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <LinearGradient
-          colors={['#FF8A80', '#7986CB']}
-          style={styles.loadingBackground}
-        >
+        <LinearGradient colors={['#FF8A80', '#7986CB']} style={styles.loadingBackground}>
           <ActivityIndicator size="large" color="white" />
         </LinearGradient>
       </View>
     );
   }
 
-  // 🔐 Si pas authentifié → AuthTestScreen (temporaire)
-  if (!isAuthenticated) {
-    return <AuthTestScreen />;
-  }
+  // 🔐 Authentification
+  if (!isAuthenticated) return <AuthTestScreen />;
 
-  // ✅ Si authentifié → Navigation normale expo-router
+  // ✅ Application principale
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-    </ThemeProvider>
+    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </ThemeProvider>
+    </NavigationThemeProvider>
   );
 }
 
-// 🚀 Layout racine avec AuthProvider
+// 🚀 Layout racine
 export default function RootLayout() {
   return (
     <AuthProvider>
@@ -64,13 +61,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-  },
-
-  loadingBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  loadingContainer: { flex: 1 },
+  loadingBackground: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

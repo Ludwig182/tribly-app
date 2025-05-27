@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@/theme/ThemeProvider';
 
 // Import des composants
 import TribsOverview from './TribsOverview';
@@ -19,7 +20,7 @@ export default function HomeScreen() {
   const { userName, familyMember, userRole, isAuthenticated, signOut } = useAuth();
   // 🗃️ État pour le modal de profil
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  
+  const { colors } = useTheme();
   // 👥 Données famille
   const { familyData, currentMember, stats, familyName, loading } = useFamily();
 
@@ -141,9 +142,9 @@ export default function HomeScreen() {
   // 🔄 Si loading, afficher loading
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
         </View>
       </SafeAreaView>
     );
@@ -153,8 +154,8 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header avec gradient */}
-        <LinearGradient
-          colors={['#FF8A80', '#7986CB']}
+        <LinearGradient 
+          colors={[colors.primary, colors.secondary]}
           style={styles.header}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -166,7 +167,9 @@ export default function HomeScreen() {
               </View>
               <View>
                 <Text style={styles.welcomeTitle}>{getGreeting()} {displayData.parent} !</Text>
-                <Text style={styles.welcomeSubtitle}>{displayData.familyName} • {stats.totalMembers || 0} membres</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  {displayData.familyName} • {stats.totalMembers || 0} membres
+                </Text>
               </View>
             </View>
             <TouchableOpacity 
@@ -175,10 +178,7 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               {familyMember?.avatarUrl ? (
-                <Image 
-                  source={{ uri: familyMember.avatarUrl }} 
-                  style={styles.profileImage}
-                />
+                <Image source={{ uri: familyMember.avatarUrl }} style={styles.profileImage} />
               ) : (
                 <Text style={styles.profileEmoji}>
                   {familyMember?.avatar || '👤'}
