@@ -439,19 +439,29 @@ export default function EditProfileModal({
               {/* Date de naissance */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>🎂 Date de naissance</Text>
-                <TouchableOpacity
-                  style={[styles.dateButton, !canEditBirthDate && styles.dateButtonDisabled]}
-                  onPress={() => canEditBirthDate && setShowDatePicker(true)}
-                  disabled={!canEditBirthDate}
-                >
-                  <Text style={[styles.dateButtonText, !canEditBirthDate && styles.dateButtonTextDisabled]}>
+                
+                {/* Affichage de la date actuelle */}
+                <View style={[styles.dateDisplay, !canEditBirthDate && styles.dateDisplayDisabled]}>
+                  <Text style={[styles.dateDisplayText, !canEditBirthDate && styles.dateDisplayTextDisabled]}>
                     {newBirthDate 
                       ? `${newBirthDate.toLocaleDateString('fr-FR')} (${calculateAge(newBirthDate)} ans)`
-                      : 'Sélectionner une date'
+                      : 'Aucune date sélectionnée'
                     }
                   </Text>
-                  <Text style={styles.dateButtonIcon}>📅</Text>
-                </TouchableOpacity>
+                </View>
+
+                {/* Bouton pour changer */}
+                {canEditBirthDate && (
+                  <TouchableOpacity
+                    style={styles.changeDateButton}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={styles.changeDateButtonText}>
+                      📅 {newBirthDate ? 'Modifier la date' : 'Choisir une date'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
                 {!canEditBirthDate && (
                   <Text style={styles.permissionText}>
                     Seuls les parents peuvent modifier la date de naissance des enfants
@@ -554,16 +564,50 @@ export default function EditProfileModal({
           </ScrollView>
 
           {/* DatePicker Modal */}
+          {/* DatePicker Modal - Version corrigée */}
           {showDatePicker && (
-            <DateTimePicker
-              value={newBirthDate || new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onDateChange}
-              maximumDate={new Date()}
-              minimumDate={new Date(1900, 0, 1)}
-            />
-          )}
+          <Modal
+            visible={showDatePicker}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowDatePicker(false)}
+          >
+            <View style={styles.dateModalOverlay}>
+              <View style={styles.dateModalContent}>
+                <View style={styles.dateModalHeader}>
+                  <TouchableOpacity
+                    style={styles.dateModalCancelBtn}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.dateModalCancelText}>Annuler</Text>
+                  </TouchableOpacity>
+                  
+                  <Text style={styles.dateModalTitle}>Date de naissance</Text>
+                  
+                  <TouchableOpacity
+                    style={styles.dateModalConfirmBtn}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.dateModalConfirmText}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.datePickerContainer}>
+                  <DateTimePicker
+                    value={newBirthDate || new Date()}
+                    mode="date"
+                    display="spinner"
+                    onChange={onDateChange}
+                    maximumDate={new Date()}
+                    minimumDate={new Date(1900, 0, 1)}
+                    textColor="#000000"
+                    style={styles.datePickerSpinner}
+                  />
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
@@ -865,5 +909,110 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  // Date Display (nouveau)
+  dateDisplay: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 12,
+  },
+
+  dateDisplayDisabled: {
+    backgroundColor: '#f7fafc',
+  },
+
+  dateDisplayText: {
+    fontSize: 16,
+    color: '#2d3748',
+    textAlign: 'center',
+  },
+
+  dateDisplayTextDisabled: {
+    color: '#a0aec0',
+  },
+
+  changeDateButton: {
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#0ea5e9',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+
+  changeDateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0ea5e9',
+  },
+  // Date Modal (version corrigée)
+  dateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+
+  dateModalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34, // Safe area iPhone
+    maxHeight: '50%', // ← AJOUTÉ: Limite la hauteur
+  },
+
+  dateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+
+  dateModalCancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+
+  dateModalCancelText: {
+    fontSize: 16,
+    color: '#f56565',
+    fontWeight: '500',
+  },
+
+  dateModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+
+  dateModalConfirmBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+
+  dateModalConfirmText: {
+    fontSize: 16,
+    color: '#48bb78',
+    fontWeight: '600',
+  },
+
+  // ← NOUVEAUX STYLES POUR LE PICKER
+  datePickerContainer: {
+    height: 250,                    // ← Hauteur fixe
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+
+  datePickerSpinner: {
+    height: 200,                    // ← Hauteur du spinner
+    width: '100%',
   },
 });
