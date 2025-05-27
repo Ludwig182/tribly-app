@@ -1,230 +1,176 @@
-// src/hooks/useAuth.js - Version ultra-minimale
-import { useState, useEffect, useContext, createContext } from 'react';
+// src/hooks/useAuth.js – Version complète Firebase + mode test
+import React, { useState, useEffect, useContext, createContext } from 'react';
+import { auth } from '../config/firebase';          // instance Auth unique
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged
+} from 'firebase/auth';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
+/* -------------------------------------------------------------------------- */
+/*                                AuthProvider                                */
+/* -------------------------------------------------------------------------- */
 export const AuthProvider = ({ children }) => {
-  console.log('🔄 AuthProvider démarré (version minimale)');
-  
-  // 🗃️ États d'authentification
-  const [user, setUser] = useState(null);                    // Firebase User
-  const [familyMember, setFamilyMember] = useState(null);    // Membre de la famille
-  const [familyId, setFamilyId] = useState(null);            // ID famille actuelle
-  const [loading, setLoading] = useState(false);             // Chargement actions
-  const [initializing, setInitializing] = useState(true);    // Initialisation Firebase
+  /** États principaux */
+  const [user, setUser] = useState(null);            // Firebase user
+  const [familyMember, setFamilyMember] = useState(null);
+  const [familyId, setFamilyId] = useState(null);
+  const [loading, setLoading] = useState(true);      // true tant qu'on n'a pas la réponse Firebase
   const [error, setError] = useState(null);
 
-  // 🔄 Initialisation simplifiée (pas de Firebase Auth pour l'instant)
+  /** Écoute Firebase – persiste entre relances grâce à AsyncStorage */
   useEffect(() => {
-    console.log('🚀 Initialisation useAuth minimal...');
-    
-    // Simuler l'initialisation
-    setTimeout(() => {
-      setInitializing(false);
-      console.log('✅ Initialisation terminée');
-    }, 1000);
-    
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Récupère ou crée le membre dans la famille
+        const { authService } = await import('../services/authService');
+        const { member, familyId: famId } =
+          await authService.getOrCreateFamilyMember(firebaseUser);
+
+        setUser(firebaseUser);
+        setFamilyMember(member);
+        setFamilyId(famId);
+      } else {
+        // Déconnexion
+        setUser(null);
+        setFamilyMember(null);
+        setFamilyId(null);
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe; // nettoyage on unmount
   }, []);
 
-  // 🔐 ACTIONS D'AUTHENTIFICATION (version ultra-minimale)
-  const authActions = {
-    
-    // 🧪 Mode test (connexion bypass pour développement)
-    signInTestMode: async (testUserName = 'Ludwig Test') => {
-      console.log('🧪 Mode test activé:', testUserName);
-      
-      setLoading(true);
-      
-      try {
-        // Simuler un délai
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Simuler un utilisateur Firebase pour les tests
-        const mockUser = {
-          uid: 'test-user-001',
-          email: 'ludwig.test@tribly.com',
-          displayName: testUserName,
-          emailVerified: true
-        };
+  /* ---------------------------------------------------------------------- */
+  /*                                 Actions                                */
+  /* ---------------------------------------------------------------------- */
 
-        // Simuler un membre famille
-        const mockMember = {
-          id: 'user-001',
-          name: testUserName,
-          email: mockUser.email,
-          role: 'admin',
-          avatar: '👤',
-          color: '#7986CB',
-          tribs: 0
-        };
+  /** 🔧 Mode test (aucune requête Firebase) */
+  const signInTestMode = async (testName = 'Ludwig Test') => {
+    setLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 400));   // petit délai visuel
 
-        setUser(mockUser);
-        setFamilyMember(mockMember);
-        setFamilyId('famille-questroy-test');
-        
-        console.log('✅ Mode test connecté:', testUserName);
-        
-      } catch (error) {
-        console.error('❌ Erreur mode test:', error);
-        setError(error.message);
-        throw error;
-      } finally {
-        setLoading(false);
-      }
-    },
-
-    // 📧 Connexion Email (version simplifiée)
-    signInWithEmail: async (email, password) => {
-      console.log('🔄 Connexion email:', email);
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Importer authService dynamiquement pour éviter les erreurs au démarrage
-        const { authService } = await import('../services/authService');
-        
-        const result = await authService.signInWithEmail(email, password);
-        
-        if (result.user) {
-          // Récupérer les données famille
-          const familyData = await authService.getOrCreateFamilyMember(result.user);
-          
-          setUser(result.user);
-          setFamilyMember(familyData.member);
-          setFamilyId(familyData.familyId);
-          
-          console.log('✅ Connexion email réussie:', familyData.member.name);
-        }
-        
-        return result;
-        
-      } catch (error) {
-        console.error('❌ Erreur connexion email:', error);
-        setError(error.message);
-        throw error;
-      } finally {
-        setLoading(false);
-      }
-    },
-    
-    // 📝 Inscription Email (version simplifiée)
-    signUpWithEmail: async (email, password, displayName) => {
-      console.log('🔄 Inscription email:', email);
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Importer authService dynamiquement
-        const { authService } = await import('../services/authService');
-        
-        const result = await authService.signUpWithEmail(email, password, displayName);
-        
-        if (result.user) {
-          // Récupérer les données famille
-          const familyData = await authService.getOrCreateFamilyMember(result.user);
-          
-          setUser(result.user);
-          setFamilyMember(familyData.member);
-          setFamilyId(familyData.familyId);
-          
-          console.log('✅ Inscription email réussie:', familyData.member.name);
-        }
-        
-        return result;
-        
-      } catch (error) {
-        console.error('❌ Erreur inscription email:', error);
-        setError(error.message);
-        throw error;
-      } finally {
-        setLoading(false);
-      }
-    },
-    
-    // 🚪 Déconnexion
-    signOut: async () => {
-      console.log('🔄 Déconnexion...');
-      
-      setLoading(true);
-      
-      try {
-        // Si on est en mode test, juste clear les états
-        if (user?.uid === 'test-user-001') {
-          setUser(null);
-          setFamilyMember(null);
-          setFamilyId(null);
-          console.log('✅ Déconnexion mode test');
-        } else {
-          // Sinon utiliser Firebase Auth
-          const { authService } = await import('../services/authService');
-          await authService.signOut();
-        }
-        
-      } catch (error) {
-        console.error('❌ Erreur déconnexion:', error);
-        setError(error.message);
-        throw error;
-      } finally {
-        setLoading(false);
-      }
-    },
-    
-    // 🧹 Clear erreur
-    clearError: () => {
-      setError(null);
+      const mockUser = {
+        uid: 'test-user-001',
+        email: 'ludwig.test@tribly.com',
+        displayName: testName
+      };
+      const mockMember = {
+        id: 'user-001',
+        name: testName,
+        role: 'admin',
+        tribs: 0,
+        color: '#7986CB',
+        avatar: '👤'
+      };
+      setUser(mockUser);
+      setFamilyMember(mockMember);
+      setFamilyId('famille-questroy-test');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 🎯 États calculés
-  const authState = {
-    // États principaux
-    user,                    // Firebase User (auth)
-    familyMember,           // Membre famille (profil complet)
-    familyId,               // ID famille actuelle
-    
-    // États UI
-    loading,                // Loading des actions auth
-    initializing,           // Initialisation Firebase en cours
-    error,                  // Erreur auth
-    
-    // États booléens pratiques
-    isAuthenticated: !!user,
-    isLoading: loading || initializing,
-    hasFamily: !!familyId,
-    isAdmin: familyMember?.role === 'admin',
-    isParent: familyMember?.role === 'admin' || familyMember?.role === 'parent',
-    
-    // Infos utilisateur faciles d'accès
-    userEmail: user?.email || null,
-    userName: familyMember?.name || user?.displayName || null,
-    userRole: familyMember?.role || null,
-    userTribs: familyMember?.tribs || 0,
-    userAvatar: familyMember?.avatarUrl || familyMember?.avatar || '👤',
-    
-    // Actions
-    ...authActions
+  /** Connexion e-mail */
+  const signInWithEmail = async (email, pwd) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, pwd);
+      // getOrCreateFamilyMember est appelé par le listener onAuthStateChanged
+      return cred.user;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  console.log('🔄 AuthProvider render, isAuthenticated:', authState.isAuthenticated, 'initializing:', initializing);
+  /** Inscription e-mail */
+  const signUpWithEmail = async (email, pwd, displayName) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pwd);
+      // listener fera la suite
+      if (displayName) {
+        const { updateProfile } = await import('firebase/auth');
+        await updateProfile(cred.user, { displayName });
+      }
+      return cred.user;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  return (
-    <AuthContext.Provider value={authState}>
-      {children}
-    </AuthContext.Provider>
-  );
+  /** Déconnexion */
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      // si on est en mode test, simple reset local
+      if (user?.uid === 'test-user-001') {
+        setUser(null);
+        setFamilyMember(null);
+        setFamilyId(null);
+      } else {
+        await firebaseSignOut(auth);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /*                               Valeur fournie                           */
+  /* ---------------------------------------------------------------------- */
+  const value = {
+    /* données */
+    user,
+    familyMember,
+    familyId,
+    loading,
+    error,
+
+    /* helpers booléens */
+    isAuthenticated: !!user,
+    isLoading: loading,
+    isAdmin: familyMember?.role === 'admin',
+    isParent: ['admin', 'parent'].includes(familyMember?.role),
+
+    /* infos rapides */
+    userName: familyMember?.name || user?.displayName || null,
+    userEmail: user?.email || null,
+    userTribs: familyMember?.tribs || 0,
+
+    /* actions */
+    signInTestMode,
+    signInWithEmail,
+    signUpWithEmail,
+    signOut,
+    clearError: () => setError(null)
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                   Hooks                                   */
+/* -------------------------------------------------------------------------- */
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth doit être utilisé dans un AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
 
-// 🎯 Hook simplifié pour juste savoir si connecté
 export const useAuthState = () => {
   const { isAuthenticated, isLoading } = useAuth();
   return { isAuthenticated, isLoading };

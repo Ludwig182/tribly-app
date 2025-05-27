@@ -1,22 +1,27 @@
-// src/config/firebase.js - Ton fichier actuel + quelques logs
+// src/config/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import {
+  initializeAuth,
+  getReactNativePersistence
+} from 'firebase/auth';           // ← module principal
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  apiKey: '…',
+  authDomain: 'tribly-fd1d8.firebaseapp.com',
+  projectId: 'tribly-fd1d8',
+  storageBucket: 'tribly-fd1d8.appspot.com',
+  messagingSenderId: '…',
+  appId: '…'
 };
 
-// 🔍 JUSTE AJOUTER CES 3 LIGNES POUR DEBUG :
-console.log('🔥 Storage Bucket:', process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET);
-console.log('🔥 Project ID:', process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID);
+export const app = initializeApp(firebaseConfig);
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export default app;
+/* Auth unique avec persistance AsyncStorage */
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+});
+
+/* Log de contrôle — doit apparaître AVANT toute erreur */
+console.log('✅ Firebase Auth initialisé (config/firebase.js)');

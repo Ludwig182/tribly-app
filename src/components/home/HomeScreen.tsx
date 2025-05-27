@@ -107,29 +107,25 @@ export default function HomeScreen() {
       title: 'Calendrier',
       subtitle: '4 événements',
       emoji: '📅',
-      colors: ['#FF8A80', '#7986CB'],
-      onPress: () => console.log('Navigate to Calendar')
+      colors: ['#FF8A80', '#7986CB']
     },
     {
       title: 'Tâches',
       subtitle: `${stats.tasks.todo || 0} à faire`,
       emoji: '✅',
-      colors: ['#48bb78', '#38a169'],
-      onPress: () => console.log('Navigate to Tasks')
+      colors: ['#48bb78', '#38a169']
     },
     {
       title: 'Courses',
       subtitle: `${stats.shopping.toBuy || 0} articles`,
       emoji: '🛒',
-      colors: ['#FFCC80', '#A29BFE'],
-      onPress: () => console.log('Navigate to Shopping')
+      colors: ['#FFCC80', '#A29BFE']
     },
     {
       title: 'Famille',
       subtitle: `${stats.totalMembers || 0} membres`,
       emoji: '👨‍👩‍👧‍👦',
-      colors: ['#7986CB', '#FF8A80'],
-      onPress: () => console.log('Navigate to Family')
+      colors: ['#7986CB', '#FF8A80']
     }
   ];
 
@@ -197,7 +193,6 @@ export default function HomeScreen() {
           <AISuggestion
             suggestion="Système intelligent activé ! Connectez-vous avec vos tâches pour des suggestions personnalisées."
             actionText="Découvrir"
-            onActionPress={() => console.log('Navigate to Tasks')}
           />
 
           {/* Actions rapides */}
