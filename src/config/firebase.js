@@ -1,13 +1,12 @@
-// src/config/firebase.js
+// src/config/firebase.js - Version multi-plateforme
 import { initializeApp } from 'firebase/app';
-import {
-  initializeAuth,
-  getReactNativePersistence
-} from 'firebase/auth';           // ← module principal
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { 
+  initializeAuth, 
+  getAuth,
+  connectAuthEmulator 
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -19,12 +18,35 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);     // ← instance Firestore partagée
+export const db = getFirestore(app);
 
-/* Auth unique avec persistance AsyncStorage */
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// 🔧 Auth avec persistence adaptée à la plateforme
+export let auth;
 
-/* Log de contrôle — doit apparaître AVANT toute erreur */
-console.log('✅ Firebase Auth initialisé (config/firebase.js)');
+try {
+  // Détection de la plateforme
+  const isWeb = Platform.OS === 'web';
+  
+  if (isWeb) {
+    // 🌐 Version WEB : utilise l'auth par défaut
+    auth = getAuth(app);
+    console.log('✅ Firebase Auth initialisé pour le WEB');
+    
+  } else {
+    // 📱 Version MOBILE : utilise AsyncStorage
+    const { getReactNativePersistence } = require('firebase/auth');
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+    console.log('✅ Firebase Auth initialisé pour MOBILE (AsyncStorage)');
+  }
+  
+} catch (error) {
+  console.error('❌ Erreur initialisation Firebase Auth:', error);
+  
+  // Fallback : utiliser l'auth par défaut
+  auth = getAuth(app);
+  console.log('⚠️ Firebase Auth initialisé en mode fallback');
+}

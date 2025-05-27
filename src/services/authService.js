@@ -1,4 +1,4 @@
-// src/services/authService.js – Version Expo compatible
+// src/services/authService.js – Version multi-plateforme
 import { auth } from '../config/firebase';
 import {
   signInWithEmailAndPassword,
@@ -6,14 +6,11 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
   GoogleAuthProvider,
-  signInWithCredential
+  signInWithCredential,
+  signInWithPopup
 } from 'firebase/auth';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import { familyService } from './familyService';
-
-// 🔧 Configuration pour Expo
-WebBrowser.maybeCompleteAuthSession();
 
 export const authService = {
   /* ───────── Auth Email ───────── */
@@ -28,89 +25,130 @@ export const authService = {
     return { user: cred.user };
   },
 
-  /* ───────── Auth Google avec Expo ───────── */
+  /* ───────── Auth Google Multi-plateforme ───────── */
   async signInWithGoogle() {
     try {
-      console.log('🔄 Début authentification Google (Expo)...');
-
-      // 1. Configuration OAuth Google
-      const clientId = '172169964683-em9qbv3uu7bhak16vsbl1l9ud0uobv39.apps.googleusercontent.com';
+      console.log('🔄 Début authentification Google...');
       
-      const redirectUri = AuthSession.makeRedirectUri({
-        useProxy: true,
-      });
-
-      console.log('🔗 Redirect URI:', redirectUri);
-
-      // 2. Configuration de la requête OAuth
-      const request = new AuthSession.AuthRequest({
-        clientId: clientId,
-        scopes: ['openid', 'profile', 'email'],
-        redirectUri: redirectUri,
-        responseType: AuthSession.ResponseType.IdToken,
-        additionalParameters: {},
-        extraParams: {
-          nonce: Math.random().toString(36).substring(2, 15),
-        },
-      });
-
-      // 3. Déclencher le flow OAuth
-      const result = await request.promptAsync({
-        authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-        useProxy: true,
-      });
-
-      console.log('📱 Résultat OAuth:', result.type);
-
-      if (result.type !== 'success') {
-        if (result.type === 'cancel') {
-          throw new Error('Connexion annulée par l\'utilisateur');
-        }
-        throw new Error('Échec de l\'authentification Google');
-      }
-
-      // 4. Extraire l'ID token de la réponse
-      const { id_token } = result.params;
+      // Détection de la plateforme
+      const isWeb = Platform.OS === 'web';
       
-      if (!id_token) {
-        throw new Error('Token Google non reçu');
+      if (isWeb) {
+        // 🌐 VERSION WEB : signInWithPopup
+        return await this.signInWithGoogleWeb();
+      } else {
+        // 📱 VERSION MOBILE : expo-auth-session
+        return await this.signInWithGoogleMobile();
       }
-
-      console.log('✅ Token Google reçu');
-
-      // 5. Créer les credentials Firebase
-      const googleCredential = GoogleAuthProvider.credential(id_token);
-
-      // 6. Se connecter à Firebase
-      const cred = await signInWithCredential(auth, googleCredential);
-
-      console.log('✅ Authentification Firebase réussie:', cred.user.email);
-
-      return { user: cred.user };
-
+      
     } catch (error) {
-      console.error('❌ Erreur Google Sign-In (Expo):', error);
-
-      // Messages d'erreur user-friendly
-      let friendlyMessage = error.message;
-
-      if (error.code === 'auth/network-request-failed') {
-        friendlyMessage = 'Problème de connexion internet';
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        friendlyMessage = 'Connexion annulée par l\'utilisateur';
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-        friendlyMessage = 'Un compte existe déjà avec cet email';
-      } else if (error.toString().includes('Invalid client ID')) {
-        friendlyMessage = 'Configuration Google incomplète';
-      }
-
-      throw new Error(friendlyMessage);
+      console.error('❌ Erreur Google Sign-In:', error);
+      throw this.formatGoogleError(error);
     }
+  },
+
+  /* ───────── Auth Google WEB ───────── */
+  async signInWithGoogleWeb() {
+    console.log('🌐 Authentification Google Web...');
+    
+    const provider = new GoogleAuthProvider();
+    provider.addScope('profile');
+    provider.addScope('email');
+    
+    const result = await signInWithPopup(auth, provider);
+    
+    console.log('✅ Authentification Google Web réussie:', result.user.email);
+    return { user: result.user };
+  },
+
+  /* ───────── Auth Google MOBILE ───────── */
+  async signInWithGoogleMobile() {
+    console.log('📱 Authentification Google Mobile...');
+    
+    // Import dynamique pour éviter les erreurs web
+    const AuthSession = await import('expo-auth-session');
+    const WebBrowser = await import('expo-web-browser');
+    
+    WebBrowser.maybeCompleteAuthSession();
+
+    // Configuration OAuth Google
+    const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 
+                     '172169964683-your-web-client-id.apps.googleusercontent.com';
+    
+    const redirectUri = AuthSession.makeRedirectUri({
+      useProxy: true,
+    });
+
+    console.log('🔗 Redirect URI:', redirectUri);
+
+    // Configuration de la requête OAuth
+    const request = new AuthSession.AuthRequest({
+      clientId: clientId,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: redirectUri,
+      responseType: AuthSession.ResponseType.IdToken,
+      additionalParameters: {},
+      extraParams: {
+        nonce: Math.random().toString(36).substring(2, 15),
+      },
+    });
+
+    // Déclencher le flow OAuth
+    const result = await request.promptAsync({
+      authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+      useProxy: true,
+    });
+
+    console.log('📱 Résultat OAuth:', result.type);
+
+    if (result.type !== 'success') {
+      if (result.type === 'cancel') {
+        throw new Error('Connexion annulée par l\'utilisateur');
+      }
+      throw new Error('Échec de l\'authentification Google');
+    }
+
+    // Extraire l'ID token de la réponse
+    const { id_token } = result.params;
+    
+    if (!id_token) {
+      throw new Error('Token Google non reçu');
+    }
+
+    console.log('✅ Token Google reçu (Mobile)');
+
+    // Créer les credentials Firebase
+    const googleCredential = GoogleAuthProvider.credential(id_token);
+
+    // Se connecter à Firebase
+    const cred = await signInWithCredential(auth, googleCredential);
+
+    console.log('✅ Authentification Firebase réussie (Mobile):', cred.user.email);
+    return { user: cred.user };
+  },
+
+  /* ───────── Helpers ───────── */
+  formatGoogleError(error) {
+    let friendlyMessage = error.message;
+
+    if (error.code === 'auth/network-request-failed') {
+      friendlyMessage = 'Problème de connexion internet';
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      friendlyMessage = 'Connexion annulée par l\'utilisateur';
+    } else if (error.code === 'auth/account-exists-with-different-credential') {
+      friendlyMessage = 'Un compte existe déjà avec cet email';
+    } else if (error.toString().includes('Invalid client ID')) {
+      friendlyMessage = 'Configuration Google incomplète';
+    } else if (error.code === 'auth/popup-blocked') {
+      friendlyMessage = 'Popup bloquée par le navigateur. Autorisez les popups pour ce site.';
+    }
+
+    return new Error(friendlyMessage);
   },
 
   async signOut() {
     try {
-      // Déconnexion Firebase (Expo gère automatiquement le reste)
+      // Déconnexion Firebase (compatible toutes plateformes)
       await firebaseSignOut(auth);
     } catch (error) {
       console.error('❌ Erreur déconnexion:', error);
@@ -163,7 +201,7 @@ export const authService = {
       firebaseUid: firebaseUser.uid,
       role: family.members?.length ? 'child' : 'admin',
       avatar: '👤',
-      avatarUrl: firebaseUser.photoURL || null, // Photo Google si disponible
+      avatarUrl: firebaseUser.photoURL || null,
       color: '#7986CB',
       tribs: 0,
       joinedAt: new Date().toISOString()
