@@ -150,6 +150,8 @@ export const AuthProvider = ({ children }) => {
     userName: familyMember?.name || user?.displayName || null,
     userEmail: user?.email || null,
     userTribs: familyMember?.tribs || 0,
+    userAvatar: familyMember?.avatarUrl || familyMember?.avatar || '👤',
+
 
     /* actions */
     signInTestMode,
