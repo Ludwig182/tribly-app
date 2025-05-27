@@ -1,6 +1,6 @@
-// src/hooks/useAuth.js – Version complète Firebase + mode test
+// src/hooks/useAuth.js – Version avec Google Auth
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { auth } from '../config/firebase';          // instance Auth unique
+import { auth } from '../config/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -15,10 +15,10 @@ const AuthContext = createContext(null);
 /* -------------------------------------------------------------------------- */
 export const AuthProvider = ({ children }) => {
   /** États principaux */
-  const [user, setUser] = useState(null);            // Firebase user
+  const [user, setUser] = useState(null);
   const [familyMember, setFamilyMember] = useState(null);
   const [familyId, setFamilyId] = useState(null);
-  const [loading, setLoading] = useState(true);      // true tant qu'on n'a pas la réponse Firebase
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   /** Écoute Firebase – persiste entre relances grâce à AsyncStorage */
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /** Connexion e-mail */
+  /** 📧 Connexion e-mail */
   const signInWithEmail = async (email, pwd) => {
     setLoading(true);
     setError(null);
@@ -94,7 +94,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /** Inscription e-mail */
+  /** 🟦 Connexion Google */
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { authService } = await import('../services/authService');
+      const result = await authService.signInWithGoogle();
+      // getOrCreateFamilyMember est appelé par le listener onAuthStateChanged
+      return result.user;
+    } catch (err) {
+      console.error('❌ Erreur Google Sign-In dans useAuth:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** 📝 Inscription e-mail */
   const signUpWithEmail = async (email, pwd, displayName) => {
     setLoading(true);
     setError(null);
@@ -114,7 +132,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /** Déconnexion */
+  /** 🚪 Déconnexion */
   const signOut = async () => {
     setLoading(true);
     try {
@@ -124,7 +142,9 @@ export const AuthProvider = ({ children }) => {
         setFamilyMember(null);
         setFamilyId(null);
       } else {
-        await firebaseSignOut(auth);
+        // Utiliser authService pour gérer Google + Firebase
+        const { authService } = await import('../services/authService');
+        await authService.signOut();
       }
     } finally {
       setLoading(false);
@@ -154,10 +174,10 @@ export const AuthProvider = ({ children }) => {
     userTribs: familyMember?.tribs || 0,
     userAvatar: familyMember?.avatarUrl || familyMember?.avatar || '👤',
 
-
     /* actions */
     signInTestMode,
     signInWithEmail,
+    signInWithGoogle,  // 🆕 Ajout Google Auth
     signUpWithEmail,
     signOut,
     clearError: () => setError(null)

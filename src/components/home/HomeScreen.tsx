@@ -1,6 +1,6 @@
 // src/components/home/HomeScreen.tsx - Version complète avec authentification
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Import des composants
@@ -16,7 +16,9 @@ import { useFamily } from '../../hooks/useFamily';
 
 export default function HomeScreen() {
   // 🔐 Données d'authentification
-  const { userName, familyMember, userRole, isAuthenticated } = useAuth();
+  const { userName, familyMember, userRole, isAuthenticated, signOut } = useAuth();
+  // 🗃️ État pour le modal de profil
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
   
   // 👥 Données famille
   const { familyData, currentMember, stats, familyName, loading } = useFamily();
@@ -167,8 +169,21 @@ export default function HomeScreen() {
                 <Text style={styles.welcomeSubtitle}>{displayData.familyName} • {stats.totalMembers || 0} membres</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.profileBtn}>
-              <Text style={styles.profileEmoji}>👤</Text>
+            <TouchableOpacity 
+              style={styles.profileBtn}
+              onPress={() => setProfileModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              {familyMember?.avatarUrl ? (
+                <Image 
+                  source={{ uri: familyMember.avatarUrl }} 
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Text style={styles.profileEmoji}>
+                  {familyMember?.avatar || '👤'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -202,6 +217,15 @@ export default function HomeScreen() {
           <View style={styles.bottomSpacer} />
         </View>
       </ScrollView>
+      {/* Modal de profil */}
+      <ProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        user={familyMember}
+        isAuthenticated={isAuthenticated}
+        onSignOut={signOut}
+        familyName={familyName}
+      />
     </SafeAreaView>
   );
 }
@@ -280,6 +304,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
   },
+
+  profileImage: {
+  width: 41,
+  height: 41,
+  borderRadius: 20.5,
+},
   
   profileEmoji: {
     fontSize: 18,
@@ -293,5 +323,309 @@ const styles = StyleSheet.create({
   
   bottomSpacer: {
     height: 100,
+  },
+});
+
+// 👤 Modal de profil - À AJOUTER à la fin de HomeScreen.tsx
+function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, familyName }) {
+  const handleSignOut = async () => {
+    try {
+      await onSignOut();
+      onClose();
+    } catch (error) {
+      console.error('❌ Erreur déconnexion:', error);
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={modalStyles.overlay} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          style={modalStyles.content} 
+          activeOpacity={1}
+          onPress={() => {}} // Empêcher la fermeture lors du clic sur le contenu
+        >
+          {/* Avatar */}
+          <View style={modalStyles.avatarContainer}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={modalStyles.avatar} />
+            ) : (
+              <LinearGradient
+                colors={user?.color ? [user.color, user.color] : ['#FF8A80', '#7986CB']}
+                style={modalStyles.avatarFallback}
+              >
+                <Text style={modalStyles.avatarEmoji}>{user?.avatar || '👤'}</Text>
+              </LinearGradient>
+            )}
+            
+            {/* Badge du rôle */}
+            <View style={modalStyles.roleBadge}>
+              <Text style={modalStyles.roleBadgeText}>
+                {user?.role === 'admin' ? '👑' : user?.role === 'parent' ? '👤' : '⭐'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Infos utilisateur */}
+          <Text style={modalStyles.userName}>{user?.name || 'Utilisateur'}</Text>
+          <Text style={modalStyles.userRole}>
+            {user?.role === 'admin' ? 'Administrateur' : 
+             user?.role === 'parent' ? 'Parent' : 'Enfant'}
+          </Text>
+          {user?.email && (
+            <Text style={modalStyles.userEmail}>{user.email}</Text>
+          )}
+          
+          {/* Famille */}
+          <View style={modalStyles.familyInfo}>
+            <Text style={modalStyles.familyLabel}>👨‍👩‍👧‍👦 Famille</Text>
+            <Text style={modalStyles.familyName}>{familyName}</Text>
+          </View>
+
+          {/* Tribs */}
+          <LinearGradient
+            colors={['#FFD54F', '#FF8A80']}
+            style={modalStyles.tribsCard}
+          >
+            <Text style={modalStyles.tribsNumber}>{user?.tribs || 0}</Text>
+            <Text style={modalStyles.tribsLabel}>Tribs</Text>
+          </LinearGradient>
+
+          {/* Actions */}
+          <View style={modalStyles.actions}>
+            <TouchableOpacity 
+              style={modalStyles.actionButton}
+              onPress={() => {
+                onClose();
+                // TODO: Ouvrir modal d'édition de profil
+                console.log('🔧 Éditer profil - TODO');
+              }}
+            >
+              <Text style={modalStyles.actionButtonIcon}>✏️</Text>
+              <Text style={modalStyles.actionButtonText}>Éditer profil</Text>
+            </TouchableOpacity>
+
+            {isAuthenticated && (
+              <TouchableOpacity 
+                style={[modalStyles.actionButton, modalStyles.signOutButton]}
+                onPress={handleSignOut}
+              >
+                <Text style={modalStyles.actionButtonIcon}>🚪</Text>
+                <Text style={modalStyles.signOutButtonText}>Se déconnecter</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Mode */}
+          <Text style={modalStyles.modeText}>
+            {isAuthenticated ? '🔐 Connecté' : '🧪 Mode test'}
+          </Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  content: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    marginHorizontal: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    maxWidth: 320,
+    width: '100%',
+  },
+
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  avatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  avatarEmoji: {
+    fontSize: 32,
+  },
+
+  roleBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+  },
+
+  roleBadgeText: {
+    fontSize: 12,
+  },
+
+  userName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+
+  userRole: {
+    fontSize: 14,
+    color: '#4a5568',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+
+  userEmail: {
+    fontSize: 12,
+    color: '#718096',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+
+  familyInfo: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  familyLabel: {
+    fontSize: 14,
+    color: '#4a5568',
+    marginBottom: 4,
+  },
+
+  familyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+
+  tribsCard: {
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginBottom: 24,
+    alignItems: 'center',
+    shadowColor: '#FFD54F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  tribsNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  tribsLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  actions: {
+    width: '100%',
+    gap: 12,
+  },
+
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f7fafc',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    gap: 8,
+  },
+
+  signOutButton: {
+    backgroundColor: '#fed7d7',
+    borderColor: '#feb2b2',
+  },
+
+  actionButtonIcon: {
+    fontSize: 16,
+  },
+
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+
+  signOutButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#c53030',
+  },
+
+  modeText: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 16,
+    textAlign: 'center',
   },
 });

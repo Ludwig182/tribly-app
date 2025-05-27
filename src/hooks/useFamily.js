@@ -1,12 +1,16 @@
-// src/hooks/useFamily.js - Version intégrée avec authentification
+// src/hooks/useFamily.js - Version corrigée sans import dynamique
 import { useState, useEffect, useContext, createContext } from 'react';
 import { familyService } from '../services/familyService';
 import { tasksService } from '../services/tasksService';
 import { shoppingService } from '../services/shoppingService';
+import { useAuth } from './useAuth'; // Import direct
 
 const FamilyContext = createContext();
 
 export const FamilyProvider = ({ children }) => {
+  // 🔐 Utilisation directe de useAuth (pas d'import dynamique)
+  const { familyId: authFamilyId, familyMember, isAuthenticated } = useAuth();
+
   // 🗃️ États principaux
   const [familyData, setFamilyData] = useState(null);
   const [currentMember, setCurrentMember] = useState(null);
@@ -15,59 +19,33 @@ export const FamilyProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🔐 Intégration avec l'authentification
-  const [familyId, setFamilyId] = useState(null);
-  const [authenticatedUser, setAuthenticatedUser] = useState(null);
+  // 🎯 Définir familyId et currentMember depuis auth ou fallback test
+  const familyId = authFamilyId || 'famille-questroy-test';
+  const authenticatedUser = familyMember;
 
-  // 🔗 Hook pour se connecter à l'auth (si disponible)
+  // 🔄 Effet pour initialiser currentMember
   useEffect(() => {
-    const tryConnectAuth = async () => {
-      try {
-        const { useAuth } = await import('./useAuth');
-        const authContext = useAuth();
-
-        if (authContext) {
-          const { familyId: authFamilyId, familyMember, isAuthenticated } = authContext;
-
-          if (isAuthenticated && authFamilyId && familyMember) {
-            console.log('🔗 Connexion auth réussie :', {
-              name: familyMember.name,
-              email: familyMember.email,
-              firebaseUid: familyMember.firebaseUid,
-              id: familyMember.id,
-              role: familyMember.role
-            });
-            setFamilyId(authFamilyId);
-            setCurrentMember(familyMember);
-            setAuthenticatedUser(familyMember);
-            return;
-          } else {
-            console.log('⚠️ AuthContext présent mais incomplet → fallback test');
-          }
-        } else {
-          console.log('⚠️ AuthContext absent → fallback test');
-        }
-      } catch (error) {
-        console.log('❌ Erreur dans tryConnectAuth:', error);
-        console.log('⚠️ Auth non disponible, utilisation mode test');
-      }
-
-      // 🧪 Fallback : mode test avec données statiques
-      console.log('🧪 Mode test activé');
-      setFamilyId('famille-questroy-test');
-
+    if (isAuthenticated && familyMember) {
+      console.log('🔗 Utilisateur authentifié:', {
+        name: familyMember.name,
+        role: familyMember.role,
+        id: familyMember.id
+      });
+      setCurrentMember(familyMember);
+    } else {
+      console.log('🧪 Mode test - utilisateur par défaut');
       const defaultMember = {
-        id: 'user-002',
-        name: 'Rosaly',
-        role: 'parent',
-        email: 'rosaly@questroy.com',
-        tribs: 235
+        id: 'user-001',
+        name: 'Ludwig',
+        role: 'admin',
+        email: 'ludwig@questroy.com',
+        tribs: 0,
+        avatar: '👤',
+        color: '#7986CB'
       };
       setCurrentMember(defaultMember);
-    };
-
-    tryConnectAuth();
-  }, []);
+    }
+  }, [isAuthenticated, familyMember]);
 
   // 🔄 Effet principal pour les données Firebase
   useEffect(() => {
@@ -92,10 +70,10 @@ export const FamilyProvider = ({ children }) => {
         console.log('✅ Données famille reçues:', family.familyName || family.name);
         setFamilyData(family);
         
-        // 🎯 Si pas de membre actuel ET pas d'auth, utiliser le premier parent
+        // 🎯 Si pas de membre actuel ET pas d'auth, utiliser le premier admin
         if (!currentMember && !authenticatedUser && family.members) {
-          const firstParent = family.members.find(m => m.role === 'parent' || m.role === 'admin');
-          const fallbackMember = firstParent || family.members[0];
+          const firstAdmin = family.members.find(m => m.role === 'admin');
+          const fallbackMember = firstAdmin || family.members[0];
           
           if (fallbackMember) {
             console.log('👤 Membre par défaut:', fallbackMember.name);
@@ -160,7 +138,7 @@ export const FamilyProvider = ({ children }) => {
 
   // 🎯 Actions famille
   const familyActions = {
-    // 👤 Changer d'utilisateur actuel (pour tests ou changement de profil)
+    // 👤 Changer d'utilisateur actuel (pour tests)
     switchMember: (member) => {
       console.log('👤 Changement membre:', member.name);
       setCurrentMember(member);
@@ -256,7 +234,7 @@ export const FamilyProvider = ({ children }) => {
     // Infos auth
     familyId,
     authenticatedUser,
-    isAuthenticated: !!authenticatedUser,
+    isAuthenticated,
     
     // États calculés utiles
     familyName: familyData?.familyName || familyData?.name || 'Famille',

@@ -1,4 +1,4 @@
-// src/components/auth/AuthTestScreen.tsx - Écran de test temporaire
+// src/components/auth/AuthTestScreen.tsx - Avec Google Auth
 import React, { useState } from 'react';
 import {
   View,
@@ -7,7 +7,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   TextInput,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,7 +17,8 @@ export default function AuthTestScreen() {
   const { 
     signInTestMode, 
     signInWithEmail, 
-    signUpWithEmail, 
+    signUpWithEmail,
+    signInWithGoogle,  // 🆕 Ajout Google
     error, 
     loading,
     clearError 
@@ -32,6 +34,15 @@ export default function AuthTestScreen() {
       Alert.alert('✅ Connexion test réussie !', `Bienvenue ${name} !`);
     } catch (error) {
       Alert.alert('❌ Erreur', error.message);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      Alert.alert('✅ Connexion Google réussie !');
+    } catch (error) {
+      Alert.alert('❌ Erreur Google', error.message);
     }
   };
 
@@ -63,7 +74,38 @@ export default function AuthTestScreen() {
           <Text style={styles.title}>🧪 Mode Test Auth</Text>
           <Text style={styles.subtitle}>Tester l'authentification</Text>
 
-          {/* Mode Test (le plus simple) */}
+          {/* Connexion Google - EN PREMIER */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Connexion rapide</Text>
+            <TouchableOpacity
+              style={[styles.googleButton, loading && styles.disabledButton]}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={['#ffffff', '#f8f9fa']}
+                style={styles.googleButtonGradient}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#4285F4" />
+                ) : (
+                  <>
+                    <Text style={styles.googleIcon}>G</Text>
+                    <Text style={styles.googleButtonText}>Continuer avec Google</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* Séparateur */}
+          <View style={styles.separator}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>ou</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          {/* Mode Test */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Mode Test</Text>
             <TextInput
@@ -137,8 +179,9 @@ export default function AuthTestScreen() {
           {/* Info */}
           <View style={styles.infoContainer}>
             <Text style={styles.infoText}>
+              🟦 Connexion Google : Authentification Firebase réelle{'\n'}
               💡 Mode test : Connexion sans Firebase Auth{'\n'}
-              📧 Mode email : Utilise Firebase Auth réel
+              📧 Mode email : Utilise Firebase Auth email
             </Text>
           </View>
         </View>
@@ -193,6 +236,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Google Button (nouveau style)
+  googleButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8,
+  },
+
+  googleButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+
+  googleIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+    marginRight: 12,
+    fontFamily: 'System',
+  },
+
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+
+  // Séparateur
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+
+  separatorText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginHorizontal: 16,
+    fontWeight: '500',
+  },
+
   input: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
@@ -224,6 +323,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
     textAlign: 'center',
+  },
+
+  disabledButton: {
+    opacity: 0.6,
   },
 
   errorContainer: {
