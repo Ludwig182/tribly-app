@@ -1,4 +1,4 @@
-// src/components/auth/AuthTestScreen.tsx - Avec Google Auth
+// src/components/auth/AuthTestScreen.tsx - FIX CLAVIER
 import React, { useState } from 'react';
 import {
   View,
@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,  // ← AJOUTÉ
+  Platform,              // ← AJOUTÉ
+  ScrollView            // ← AJOUTÉ
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,7 +21,7 @@ export default function AuthTestScreen() {
     signInTestMode, 
     signInWithEmail, 
     signUpWithEmail,
-    signInWithGoogle,  // 🆕 Ajout Google
+    signInWithGoogle,
     error, 
     loading,
     clearError 
@@ -66,126 +69,150 @@ export default function AuthTestScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#FF8A80', '#7986CB']}
-        style={styles.background}
+      <KeyboardAvoidingView 
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'position' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={styles.content}>
-          <Text style={styles.title}>🧪 Mode Test Auth</Text>
-          <Text style={styles.subtitle}>Tester l'authentification</Text>
+        <LinearGradient
+          colors={['#FF8A80', '#7986CB']}
+          style={styles.background}
+        >
+          <ScrollView 
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+            automaticallyAdjustContentInsets={false}
+          >
+            <View style={styles.content}>
+              <View style={styles.header}>
+                <Text style={styles.title}>🧪 Mode Test Auth</Text>
+                <Text style={styles.subtitle}>Tester l'authentification</Text>
+              </View>
 
-          {/* Connexion Google - EN PREMIER */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Connexion rapide</Text>
-            <TouchableOpacity
-              style={[styles.googleButton, loading && styles.disabledButton]}
-              onPress={handleGoogleSignIn}
-              disabled={loading}
-            >
-              <LinearGradient
-                colors={['#ffffff', '#f8f9fa']}
-                style={styles.googleButtonGradient}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#4285F4" />
-                ) : (
-                  <>
-                    <Text style={styles.googleIcon}>G</Text>
-                    <Text style={styles.googleButtonText}>Continuer avec Google</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+              {/* Connexion Google - EN PREMIER */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Connexion rapide</Text>
+                <TouchableOpacity
+                  style={[styles.googleButton, loading && styles.disabledButton]}
+                  onPress={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <LinearGradient
+                    colors={['#ffffff', '#f8f9fa']}
+                    style={styles.googleButtonGradient}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#4285F4" />
+                    ) : (
+                      <>
+                        <Text style={styles.googleIcon}>G</Text>
+                        <Text style={styles.googleButtonText}>Continuer avec Google</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
 
-          {/* Séparateur */}
-          <View style={styles.separator}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>ou</Text>
-            <View style={styles.separatorLine} />
-          </View>
+              {/* Séparateur */}
+              <View style={styles.separator}>
+                <View style={styles.separatorLine} />
+                <Text style={styles.separatorText}>ou</Text>
+                <View style={styles.separatorLine} />
+              </View>
 
-          {/* Mode Test */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Mode Test</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Nom d'utilisateur"
-              placeholderTextColor="rgba(255,255,255,0.7)"
-            />
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleTestSignIn}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Connexion...' : '🚀 Connexion Test'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {/* Mode Test */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Mode Test</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nom d'utilisateur"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                />
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={handleTestSignIn}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    {loading ? 'Connexion...' : '🚀 Connexion Test'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-          {/* Connexion Email */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Connexion Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Email"
-              placeholderTextColor="rgba(255,255,255,0.7)"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mot de passe"
-              placeholderTextColor="rgba(255,255,255,0.7)"
-              secureTextEntry
-            />
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleEmailSignIn}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                📧 Se connecter
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={handleEmailSignUp}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                📝 S'inscrire
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {/* Connexion Email */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Connexion Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Email"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                />
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Mot de passe"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  secureTextEntry
+                  autoComplete="password"
+                  textContentType="password"
+                />
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={handleEmailSignIn}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    📧 Se connecter
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.secondaryButton]}
+                  onPress={handleEmailSignUp}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    📝 S'inscrire
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-          {/* Erreur */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>❌ {error}</Text>
-              <TouchableOpacity onPress={clearError}>
-                <Text style={styles.errorDismiss}>Masquer</Text>
-              </TouchableOpacity>
+              {/* Erreur */}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>❌ {error}</Text>
+                  <TouchableOpacity onPress={clearError}>
+                    <Text style={styles.errorDismiss}>Masquer</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Info */}
+              <View style={styles.infoContainer}>
+                <Text style={styles.infoText}>
+                  🟦 Google : Auth Firebase réelle{'\n'}
+                  💡 Test : Sans Firebase{'\n'}
+                  📧 Email : Firebase Auth classique
+                </Text>
+              </View>
+
+              {/* Espace pour le clavier */}
+              <View style={styles.keyboardSpacer} />
             </View>
-          )}
-
-          {/* Info */}
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
-              🟦 Connexion Google : Authentification Firebase réelle{'\n'}
-              💡 Mode test : Connexion sans Firebase Auth{'\n'}
-              📧 Mode email : Utilise Firebase Auth email
-            </Text>
-          </View>
-        </View>
-      </LinearGradient>
+          </ScrollView>
+        </LinearGradient>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -195,22 +222,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // 🆕 NOUVELLES SECTIONS pour keyboard
+  keyboardView: {
+    flex: 1,
+  },
+
+  scrollContainer: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: '100%',
+  },
+
   background: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    minHeight: '100%',
   },
 
   content: {
-    flex: 1,
-    justifyContent: 'center',
     maxWidth: 400,
     alignSelf: 'center',
     width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+
+  // 🆕 Espace pour le clavier
+  keyboardSpacer: {
+    height: 50,
+  },
+
+  // 🆕 Header section
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
   },
 
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: 'white',
     textAlign: 'center',
@@ -225,7 +277,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginBottom: 30,
+    marginBottom: 25,
   },
 
   sectionTitle: {
@@ -236,7 +288,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Google Button (nouveau style)
+  // Google Button
   googleButton: {
     borderRadius: 12,
     overflow: 'hidden',
@@ -356,8 +408,8 @@ const styles = StyleSheet.create({
   infoContainer: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
-    padding: 16,
-    marginTop: 20,
+    padding: 12,
+    marginTop: 15,
   },
 
   infoText: {
