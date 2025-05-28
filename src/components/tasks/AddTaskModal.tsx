@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
+    Image,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -26,6 +27,7 @@ interface Member {
   role: 'admin' | 'parent' | 'child';
   color: string;
   avatar: string;
+  avatarUrl?: string; // 👈 Ajout de l'URL de la vraie photo
 }
 
 interface AddTaskModalProps {
@@ -310,12 +312,30 @@ export default function AddTaskModal({ visible, onClose, onSuccess }: AddTaskMod
                       ]}
                       onPress={() => toggleMemberSelection(member.id)}
                     >
-                      <LinearGradient
-                        colors={[member.color, member.color]}
-                        style={styles.memberAvatar}
-                      >
-                        <Text style={styles.memberAvatarText}>{member.avatar}</Text>
-                      </LinearGradient>
+                      {/* 📸 Avatar avec vraie photo ou fallback emoji */}
+                      <View style={styles.memberAvatarContainer}>
+                        {member.avatarUrl ? (
+                          <Image 
+                            source={{ uri: member.avatarUrl }} 
+                            style={styles.memberAvatarImage}
+                            defaultSource={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' }}
+                          />
+                        ) : (
+                          <LinearGradient
+                            colors={[member.color, member.color]}
+                            style={styles.memberAvatar}
+                          >
+                            <Text style={styles.memberAvatarText}>{member.avatar}</Text>
+                          </LinearGradient>
+                        )}
+                        
+                        {/* Badge rôle par-dessus */}
+                        <View style={styles.roleBadge}>
+                          <Text style={styles.roleBadgeText}>
+                            {member.role === 'admin' ? '👑' : member.role === 'parent' ? '👤' : '⭐'}
+                          </Text>
+                        </View>
+                      </View>
                       <Text style={[
                         styles.memberName,
                         { 
@@ -324,9 +344,6 @@ export default function AddTaskModal({ visible, onClose, onSuccess }: AddTaskMod
                         }
                       ]}>
                         {member.name}
-                      </Text>
-                      <Text style={[styles.memberRole, { color: colors.textSecondary }]}>
-                        {member.role === 'admin' ? '👑' : member.role === 'parent' ? '👤' : '⭐'}
                       </Text>
                       {isSelected && (
                         <Text style={[styles.checkMark, { color: colors.primary }]}>✓</Text>
@@ -543,18 +560,48 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
 
+  memberAvatarContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+
+  memberAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+
   memberAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
 
   memberAvatarText: {
     fontSize: 18,
     color: 'white',
+  },
+
+  roleBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  roleBadgeText: {
+    fontSize: 8,
   },
 
   memberName: {

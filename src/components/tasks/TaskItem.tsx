@@ -20,6 +20,8 @@ interface TaskItemProps {
   task: Task;
   onComplete: (taskId: number) => void;
   onUncomplete?: (taskId: number) => void;
+  onDelete?: (taskId: number) => void; // 🗑️ Nouveau prop
+  currentUserRole?: string; // 🔐 Rôle pour permissions
   getTaskUrgency: (dueDate?: Date) => { text: string; color: string; emoji: string };
   formatCompletedTime?: (completedDate?: Date, completedAt?: string) => string;
 }
@@ -28,11 +30,16 @@ export default function TaskItem({
   task, 
   onComplete, 
   onUncomplete, 
+  onDelete,
+  currentUserRole,
   getTaskUrgency, 
   formatCompletedTime 
 }: TaskItemProps) {
   const { colors } = useTheme();
   const urgency = getTaskUrgency(task.dueDate);
+
+  // 🔐 Permissions pour supprimer (adultes seulement)
+  const canDelete = currentUserRole === 'admin' || currentUserRole === 'parent';
 
   if (task.status === 'completed') {
     return (
@@ -103,21 +110,44 @@ export default function TaskItem({
       </View>
       
       {/* 👈 Bouton completion : Thématique */}
-      <TouchableOpacity 
-        style={[
-          styles.completeBtn,
-          { 
-            backgroundColor: colors.overlayLight || 'rgba(76, 187, 120, 0.1)',
-            borderColor: colors.primary
-          }
-        ]}
-        onPress={() => onComplete(task.id)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.completeBtnText, { color: colors.primary }]}>
-          ✓ Marquer comme terminé
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.taskActions}>
+        <TouchableOpacity 
+          style={[
+            styles.completeBtn,
+            { 
+              backgroundColor: colors.overlayLight || 'rgba(76, 187, 120, 0.1)',
+              borderColor: colors.primary,
+              flex: canDelete ? 1 : undefined,
+              marginRight: canDelete ? 8 : 0
+            }
+          ]}
+          onPress={() => onComplete(task.id)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.completeBtnText, { color: colors.primary }]}>
+            ✓ Marquer comme terminé
+          </Text>
+        </TouchableOpacity>
+
+        {/* 🗑️ Bouton supprimer (adultes seulement) */}
+        {canDelete && onDelete && (
+          <TouchableOpacity 
+            style={[
+              styles.deleteBtn,
+              { 
+                backgroundColor: colors.dangerBackground || 'rgba(244, 67, 54, 0.1)',
+                borderColor: colors.dangerBorder || '#f44336'
+              }
+            ]}
+            onPress={() => onDelete(task.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.deleteBtnText, { color: colors.dangerText || '#d32f2f' }]}>
+              🗑️
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }

@@ -1,16 +1,15 @@
 // src/services/tasksService.js - Version étendue avec permissions et Tribs
-import { 
-  collection, 
-  doc, 
+import {
   addDoc,
-  updateDoc,
+  collection,
   deleteDoc,
+  doc,
+  getDoc,
   onSnapshot,
-  query,
-  where,
   orderBy,
+  query,
   serverTimestamp,
-  getDoc 
+  updateDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { familyService } from './familyService';
@@ -382,6 +381,60 @@ export const tasksService = {
     });
 
     return stats;
+  },
+
+  /**
+   * 🗑️ Supprimer une tâche (admin/parent seulement)
+   */
+  async deleteTask(familyId, taskId, currentUserId) {
+    try {
+      console.log('🗑️ Suppression tâche:', { familyId, taskId, currentUserId });
+      
+      // 1. Récupérer la tâche et l'utilisateur
+      const taskRef = doc(db, 'families', familyId, 'tasks', taskId);
+      const taskSnap = await getDoc(taskRef);
+      
+      if (!taskSnap.exists()) {
+        throw new Error('Tâche introuvable');
+      }
+      
+      const taskData = taskSnap.data();
+      const family = await familyService.getFamily(familyId);
+      const currentUser = family.members.find(m => m.id === currentUserId);
+      
+      if (!currentUser) {
+        throw new Error('Utilisateur introuvable');
+      }
+
+      // 2. Validation permissions
+      const canDelete = 
+        currentUser.role === 'admin' || 
+        currentUser.role === 'parent' ||
+        taskData.createdBy === currentUserId;
+        
+      if (!canDelete) {
+        throw new Error('Permissions insuffisantes pour supprimer cette tâche');
+      }
+
+      // 3. Si la tâche était complétée, retirer les Tribs
+      if (taskData.completed && taskData.assigneeId && taskData.tribs > 0) {
+        try {
+          await familyService.updateMemberTribs(familyId, taskData.assigneeId, -taskData.tribs);
+          console.log('✅ Tribs retirés avant suppression:', { tribs: taskData.tribs });
+        } catch (tribsError) {
+          console.warn('⚠️ Erreur retrait Tribs:', tribsError);
+        }
+      }
+
+      // 4. Supprimer la tâche
+      await deleteDoc(taskRef);
+
+      console.log('✅ Tâche supprimée:', taskData.title);
+      
+    } catch (error) {
+      console.error('❌ Erreur suppression tâche:', error);
+      throw new Error(error.message || 'Impossible de supprimer la tâche');
+    }
   },
 
   // 🆕 Analytics famille pour les tâches

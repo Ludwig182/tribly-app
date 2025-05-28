@@ -1,15 +1,32 @@
 // src/components/tasks/TasksContainer.tsx - Version thématique
 import React, { useEffect, useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 import { useFamily } from '../../hooks/useFamily';
-import { tasksService } from '../../services/tasksService';
 import { useTheme } from '../../theme/useTheme';
-import { Task } from '../../types/task';
-import { getExampleTasks, getMemberColor } from '../../utils/tasksHelpers';
-import AddTaskModal from './AddTaskModal';
+import { tasksService } from '../../services/tasksService';
 import TasksHeader from './TasksHeader';
 import TasksList from './TasksList';
+import AddTaskModal from './AddTaskModal';
+import { Task } from '../../types/task';
+import { getExampleTasks, getMemberColor, getTaskUrgency } from '../../utils/tasksHelpers';
+// src/utils/tasksHelpers.ts - Version corrigée pour les dates
+import { Timestamp } from 'firebase/firestore';
+
+
+// ⏱️ Format « Tâche terminée à … »
+export const formatCompletedTime = (dt?: Date, fallback?: string) => {
+  if (!dt) return fallback;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const comp = new Date(dt); comp.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((today.getTime() - comp.getTime()) / (24 * 60 * 60 * 1000));
+
+  if (diff === 0) return dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 1) return 'Hier';
+  if (diff === 2) return 'Avant-hier';
+  if (diff < 7) return `${dt.toLocaleDateString('fr-FR', { weekday: 'long' })} dernier`;
+  return dt.toLocaleDateString('fr-FR');
+};
 
 export default function TasksContainer() {
   // 🎨 Thème adaptatif
@@ -123,6 +140,39 @@ export default function TasksContainer() {
     if (familyId && isAuthenticated) await tasksService.uncompleteTask(familyId, id, familyMember?.id);
   };
 
+  // 🗑️ Supprimer une tâche (adultes seulement)
+  const deleteTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    Alert.alert(
+      '🗑️ Supprimer la tâche',
+      `Êtes-vous sûr de vouloir supprimer "${task.title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Supprimer', 
+          style: 'destructive',
+          onPress: async () => {
+            // Retirer de l'affichage local immédiatement
+            setTasks(ts => ts.filter(t => t.id !== id));
+            
+            if (familyId && isAuthenticated) {
+              try {
+                await tasksService.deleteTask(familyId, id, familyMember?.id);
+              } catch (error) {
+                console.error('❌ Erreur suppression tâche:', error);
+                // Remettre la tâche si erreur
+                setTasks(ts => [...ts, task]);
+                Alert.alert('❌ Erreur', 'Impossible de supprimer la tâche');
+              }
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (loading || famLoading) return <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} />;
 
   return (
@@ -145,6 +195,9 @@ export default function TasksContainer() {
         }
         onComplete={completeTask}
         onUndo={undoTask}
+        onDelete={deleteTask}
+        currentUserRole={familyMember?.role}
+        getTaskUrgency={getTaskUrgency}
       />
 
       {/* ➕ Bouton ajout thématique (parents/admin seulement) */}

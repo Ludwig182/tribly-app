@@ -1,4 +1,4 @@
-// src/utils/tasksHelpers.ts
+// src/utils/tasksHelpers.ts - Version corrigée pour les dates
 import { Timestamp } from 'firebase/firestore';
 import { Task } from '../types/task';
 
@@ -9,17 +9,26 @@ export const getMemberColor = (members: any[] | undefined, memberId: string, fal
   return member?.color ? [member.color, member.color] : [fallback, fallback];
 };
 
-// 🔥 Urgence d’une tâche
+// 🔥 Urgence d'une tâche - VERSION CORRIGÉE
 export const getTaskUrgency = (due?: Date | Timestamp) => {
   if (!due) return { text: 'Pas de limite', color: '#718096', emoji: '📋' };
+  
   const dueDate = due instanceof Date ? due : new Date(due.seconds * 1000);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((dueDate.getTime() - today.getTime()) / 8.64e7); // jours
+  
+  // 🎯 CORRECTION : Comparer avec la date du jour (sans heure)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Minuit aujourd'hui
+  
+  const dueDateMidnight = new Date(dueDate);
+  dueDateMidnight.setHours(0, 0, 0, 0); // Minuit du jour de deadline
+  
+  const diffMs = dueDateMidnight.getTime() - today.getTime();
+  const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000)); // Arrondir au lieu de ceil
 
-  if (diff < 0) return { text: `En retard (${Math.abs(diff)}j)`, color: '#e53e3e', emoji: '🔥' };
-  if (diff === 0) return { text: 'Aujourd’hui', color: '#ed8936', emoji: '⚡' };
-  if (diff === 1) return { text: 'Demain', color: '#ecc94b', emoji: '📅' };
-  if (diff <= 6) {
+  if (diffDays < 0) return { text: `En retard (${Math.abs(diffDays)}j)`, color: '#e53e3e', emoji: '🔥' };
+  if (diffDays === 0) return { text: 'Aujourd\'hui', color: '#ed8936', emoji: '⚡' };
+  if (diffDays === 1) return { text: 'Demain', color: '#ecc94b', emoji: '📅' };
+  if (diffDays <= 6) {
     const day = dueDate.toLocaleDateString('fr-FR', { weekday: 'long' });
     return { text: day, color: '#4a5568', emoji: '📆' };
   }
@@ -32,7 +41,7 @@ export const formatCompletedTime = (dt?: Date, fallback?: string) => {
   if (!dt) return fallback;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const comp = new Date(dt); comp.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((today.getTime() - comp.getTime()) / 8.64e7);
+  const diff = Math.ceil((today.getTime() - comp.getTime()) / (24 * 60 * 60 * 1000));
 
   if (diff === 0) return dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   if (diff === 1) return 'Hier';
