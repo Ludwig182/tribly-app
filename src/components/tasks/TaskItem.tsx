@@ -1,7 +1,8 @@
-// src/components/tasks/TaskItem.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+// src/components/tasks/TaskItem.tsx - Version thématique (boutons seulement)
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../theme/useTheme';
 
 interface Task {
   id: number;
@@ -9,7 +10,7 @@ interface Task {
   assignee: string;
   tribs: number;
   status: 'pending' | 'completed';
-  color: string[];
+  color: string[]; // 👈 Garder les couleurs membres (reconnaissance familiale)
   dueDate?: Date;
   completedAt?: string;
   completedDate?: Date;
@@ -30,45 +31,65 @@ export default function TaskItem({
   getTaskUrgency, 
   formatCompletedTime 
 }: TaskItemProps) {
+  const { colors } = useTheme();
   const urgency = getTaskUrgency(task.dueDate);
 
   if (task.status === 'completed') {
     return (
       <TouchableOpacity 
-        style={[styles.taskCard, styles.taskCompleted]}
+        style={[
+          styles.taskCard, 
+          styles.taskCompleted,
+          { 
+            backgroundColor: colors.card,
+            borderColor: colors.system?.success || '#48bb78'
+          }
+        ]}
         onPress={() => onUncomplete?.(task.id)}
         activeOpacity={0.7}
       >
         <View style={styles.taskHeader}>
           <View style={styles.taskInfo}>
-            <Text style={[styles.taskTitle, styles.taskTitleCompleted]}>{task.title}</Text>
-            <Text style={styles.taskAssignee}>👤 {task.assignee}</Text>
+            <Text style={[styles.taskTitle, styles.taskTitleCompleted, { color: colors.textSecondary }]}>
+              {task.title}
+            </Text>
+            <Text style={[styles.taskAssignee, { color: colors.textTertiary }]}>
+              👤 {task.assignee}
+            </Text>
           </View>
           <View style={styles.taskRight}>
+            {/* 👈 Badge Tribs : Garder les couleurs membres */}
             <LinearGradient
               colors={task.color}
               style={styles.tribsBadgeCompleted}
             >
               <Text style={styles.tribsText}>+{task.tribs} T</Text>
             </LinearGradient>
-            <Text style={styles.completedTime}>
+            <Text style={[styles.completedTime, { color: colors.system?.success || '#48bb78' }]}>
               ✅ {formatCompletedTime?.(task.completedDate, task.completedAt)}
             </Text>
           </View>
         </View>
-        <Text style={styles.undoHint}>Appuyer pour annuler</Text>
+        <Text style={[styles.undoHint, { color: colors.textTertiary }]}>
+          Appuyer pour annuler
+        </Text>
       </TouchableOpacity>
     );
   }
 
   return (
-    <View style={styles.taskCard}>
+    <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.taskHeader}>
         <View style={styles.taskInfo}>
-          <Text style={styles.taskTitle}>{task.title}</Text>
-          <Text style={styles.taskAssignee}>👤 {task.assignee}</Text>
+          <Text style={[styles.taskTitle, { color: colors.text }]}>
+            {task.title}
+          </Text>
+          <Text style={[styles.taskAssignee, { color: colors.textSecondary }]}>
+            👤 {task.assignee}
+          </Text>
         </View>
         <View style={styles.taskRight}>
+          {/* 👈 Badge Tribs : Garder les couleurs membres */}
           <LinearGradient
             colors={task.color}
             style={styles.tribsBadge}
@@ -81,12 +102,21 @@ export default function TaskItem({
         </View>
       </View>
       
+      {/* 👈 Bouton completion : Thématique */}
       <TouchableOpacity 
-        style={styles.completeBtn}
+        style={[
+          styles.completeBtn,
+          { 
+            backgroundColor: colors.overlayLight || 'rgba(76, 187, 120, 0.1)',
+            borderColor: colors.primary
+          }
+        ]}
         onPress={() => onComplete(task.id)}
         activeOpacity={0.7}
       >
-        <Text style={styles.completeBtnText}>✓ Marquer comme terminé</Text>
+        <Text style={[styles.completeBtnText, { color: colors.primary }]}>
+          ✓ Marquer comme terminé
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -94,7 +124,6 @@ export default function TaskItem({
 
 const styles = StyleSheet.create({
   taskCard: {
-    backgroundColor: 'white',
     borderRadius: 15,
     padding: 16,
     marginBottom: 12,
@@ -103,12 +132,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
   },
   
   taskCompleted: {
     opacity: 0.8,
-    borderWidth: 1,
-    borderColor: '#48bb78',
   },
   
   taskHeader: {
@@ -125,18 +153,15 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2d3748',
     marginBottom: 4,
   },
   
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: '#4a5568',
   },
   
   taskAssignee: {
     fontSize: 12,
-    color: '#4a5568',
   },
   
   taskRight: {
@@ -170,9 +195,7 @@ const styles = StyleSheet.create({
   },
   
   completeBtn: {
-    backgroundColor: '#f0fff4',
     borderWidth: 1,
-    borderColor: '#48bb78',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
@@ -181,18 +204,15 @@ const styles = StyleSheet.create({
   completeBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#48bb78',
   },
   
   completedTime: {
     fontSize: 11,
-    color: '#48bb78',
     fontWeight: '500',
   },
   
   undoHint: {
     fontSize: 11,
-    color: '#718096',
     textAlign: 'center',
     fontStyle: 'italic',
   },

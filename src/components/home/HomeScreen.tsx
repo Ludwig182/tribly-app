@@ -1,15 +1,14 @@
-// src/components/home/HomeScreen.tsx - Version complète avec authentification
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Import des composants
-import TribsOverview from './TribsOverview';
-import PrioritiesList from './PrioritiesList';
-import FamilyActivity from './FamilyActivity';
 import AISuggestion from './AISuggestion';
+import FamilyActivity from './FamilyActivity';
+import PrioritiesList from './PrioritiesList';
 import QuickActions from './QuickActions';
+import TribsOverview from './TribsOverview';
 
 // Import des hooks
 import { useAuth } from '../../hooks/useAuth';
@@ -20,7 +19,7 @@ export default function HomeScreen() {
   const { userName, familyMember, userRole, isAuthenticated, signOut } = useAuth();
   // 🗃️ État pour le modal de profil
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const { colors } = useTheme();
+  const { colors, fontSizeBase, fontFamily } = useTheme();  // ← Utilisation du thème (couleurs, taille base, police)
   // 👥 Données famille
   const { familyData, currentMember, stats, familyName, loading } = useFamily();
 
@@ -71,7 +70,7 @@ export default function HomeScreen() {
     members: familyMembers.map(member => ({
       name: member.name,
       initial: member.name[0],
-      color: member.color ? [member.color, member.color] : ['#FF8A80', '#7986CB'],
+      color: member.color ? [member.color, member.color] : [colors.primary, colors.secondary],  // via thème
       online: member.status === 'online' || true
     })),
     parent: userName || currentMember?.name || 'Utilisateur',
@@ -87,7 +86,7 @@ export default function HomeScreen() {
         streak: Math.floor(Math.random() * 7) + 1, // TODO: Calculate real streak
         status: getRandomStatus(),
         nextReward: getNextReward(child.tribs || 0),
-        color: child.color ? [child.color, child.color] : ['#FF8A80', '#7986CB']
+        color: child.color ? [child.color, child.color] : [colors.primary, colors.secondary]  // via thème
       })),
     familyGoal: {
       current: stats.totalTribs || 0,
@@ -110,25 +109,25 @@ export default function HomeScreen() {
       title: 'Calendrier',
       subtitle: '4 événements',
       emoji: '📅',
-      colors: ['#FF8A80', '#7986CB']
+      colors: [colors.primary, colors.secondary]  // via thème (anciennement #FF8A80, #7986CB)
     },
     {
       title: 'Tâches',
       subtitle: `${stats.tasks.todo || 0} à faire`,
       emoji: '✅',
-      colors: ['#48bb78', '#38a169']
+      colors: ['#48bb78', '#38a169']  // (couleurs spécifiques conservées)
     },
     {
       title: 'Courses',
       subtitle: `${stats.shopping.toBuy || 0} articles`,
       emoji: '🛒',
-      colors: ['#FFCC80', '#A29BFE']
+      colors: ['#FFCC80', '#A29BFE']  // (couleurs spécifiques conservées)
     },
     {
       title: 'Famille',
       subtitle: `${stats.totalMembers || 0} membres`,
       emoji: '👨‍👩‍👧‍👦',
-      colors: ['#7986CB', '#FF8A80']
+      colors: [colors.secondary, colors.primary]  // via thème (anciennement #7986CB, #FF8A80)
     }
   ];
 
@@ -138,6 +137,107 @@ export default function HomeScreen() {
     if (hour < 18) return 'Bon après-midi';
     return 'Bonsoir';
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,  // thème.colors.background
+    },
+
+    // Loading
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    loadingText: {
+      fontSize: fontSizeBase * 1,         // basé sur thème.fontSizeBase
+      color: colors.textSecondary,
+      fontFamily: fontFamily,
+    },
+
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 25,
+      borderBottomLeftRadius: 25,
+      borderBottomRightRadius: 25,
+    },
+
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+
+    logoSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+
+    logo: {
+      width: 40,
+      height: 40,
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    logoEmoji: {
+      fontSize: fontSizeBase * 1.25,
+      fontFamily: fontFamily,
+    },
+
+    welcomeTitle: {
+      fontSize: fontSizeBase * 1.5,
+      fontWeight: '700',
+      color: colors.onPrimary,
+      marginBottom: 5,
+      fontFamily: fontFamily,
+    },
+
+    welcomeSubtitle: {
+      fontSize: fontSizeBase * 0.875,
+      color: colors.onPrimary,
+      opacity: 0.9,
+      fontFamily: fontFamily,
+    },
+
+    profileBtn: {
+      width: 45,
+      height: 45,
+      backgroundColor: colors.overlayLight,
+      borderRadius: 22.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.overlayLightStrong,
+    },
+
+    profileImage: {
+      width: 41,
+      height: 41,
+      borderRadius: 20.5,
+    },
+
+    profileEmoji: {
+      fontSize: fontSizeBase * 1.125,
+      color: colors.onPrimary,
+      fontFamily: fontFamily,
+    },
+
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
+    },
+
+    bottomSpacer: {
+      height: 100,
+    },
+  });
 
   // 🔄 Si loading, afficher loading
   if (loading) {
@@ -230,104 +330,9 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  
-  // Loading
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  loadingText: {
-    fontSize: 16,
-    color: '#4a5568',
-  },
-  
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 25,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  
-  logoSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  
-  logo: {
-    width: 40,
-    height: 40,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  logoEmoji: {
-    fontSize: 20,
-  },
-  
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 5,
-  },
-  
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: 'white',
-    opacity: 0.9,
-  },
-  
-  profileBtn: {
-    width: 45,
-    height: 45,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 22.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-
-  profileImage: {
-  width: 41,
-  height: 41,
-  borderRadius: 20.5,
-},
-  
-  profileEmoji: {
-    fontSize: 18,
-    color: 'white',
-  },
-  
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  
-  bottomSpacer: {
-    height: 100,
-  },
-});
-
-// 👤 Modal de profil - À AJOUTER à la fin de HomeScreen.tsx
 function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, familyName }) {
+  const { colors, fontSizeBase, fontFamily } = useTheme();  // thème accessible dans le modal
+
   const handleSignOut = async () => {
     try {
       await onSignOut();
@@ -336,6 +341,216 @@ function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, fami
       console.error('❌ Erreur déconnexion:', error);
     }
   };
+
+  const modalStyles = StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlayDark,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    content: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: 30,
+      alignItems: 'center',
+      marginHorizontal: 40,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+      maxWidth: 320,
+      width: '100%',
+    },
+
+    avatarContainer: {
+      position: 'relative',
+      marginBottom: 20,
+    },
+
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 3,
+      borderColor: colors.card,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+
+    avatarFallback: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: colors.card,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+
+    avatarEmoji: {
+      fontSize: fontSizeBase * 2,
+      fontFamily: fontFamily,
+    },
+
+    roleBadge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+
+    roleBadgeText: {
+      fontSize: fontSizeBase * 0.75,
+      color: colors.text,
+      fontFamily: fontFamily,
+    },
+
+    userName: {
+      fontSize: fontSizeBase * 1.375,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+      textAlign: 'center',
+      fontFamily: fontFamily,
+    },
+
+    userRole: {
+      fontSize: fontSizeBase * 0.875,
+      color: colors.textSecondary,
+      marginBottom: 8,
+      textAlign: 'center',
+      fontFamily: fontFamily,
+    },
+
+    userEmail: {
+      fontSize: fontSizeBase * 0.75,
+      color: colors.textTertiary,
+      marginBottom: 16,
+      textAlign: 'center',
+      fontFamily: fontFamily,
+    },
+
+    familyInfo: {
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+
+    familyLabel: {
+      fontSize: fontSizeBase * 0.875,
+      color: colors.textSecondary,
+      marginBottom: 4,
+      fontFamily: fontFamily,
+    },
+
+    familyName: {
+      fontSize: fontSizeBase * 1,
+      fontWeight: '600',
+      color: colors.text,
+      fontFamily: fontFamily,
+    },
+
+    tribsCard: {
+      borderRadius: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      marginBottom: 24,
+      alignItems: 'center',
+      shadowColor: '#FFD54F',  // (couleur fixe pour effet doré)
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      elevation: 4,
+    },
+
+    tribsNumber: {
+      fontSize: fontSizeBase * 1.5,
+      fontWeight: '700',
+      color: colors.onPrimary,
+      textShadowColor: colors.shadow,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+      fontFamily: fontFamily,
+    },
+
+    tribsLabel: {
+      fontSize: fontSizeBase * 0.75,
+      color: colors.onPrimary,
+      opacity: 0.9,
+      fontWeight: '600',
+      textShadowColor: colors.shadow,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
+      fontFamily: fontFamily,
+    },
+
+    actions: {
+      width: '100%',
+      gap: 12,
+    },
+
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+
+    signOutButton: {
+      backgroundColor: colors.dangerBackground,
+      borderColor: colors.dangerBorder,
+    },
+
+    actionButtonIcon: {
+      fontSize: fontSizeBase * 1,
+      fontFamily: fontFamily,
+    },
+
+    actionButtonText: {
+      fontSize: fontSizeBase * 0.875,
+      fontWeight: '600',
+      color: colors.text,
+      fontFamily: fontFamily,
+    },
+
+    signOutButtonText: {
+      fontSize: fontSizeBase * 0.875,
+      fontWeight: '600',
+      color: colors.dangerText,
+      fontFamily: fontFamily,
+    },
+
+    modeText: {
+      fontSize: fontSizeBase * 0.75,
+      color: colors.textTertiary,
+      marginTop: 16,
+      textAlign: 'center',
+      fontFamily: fontFamily,
+    },
+  });
 
   return (
     <Modal
@@ -360,7 +575,7 @@ function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, fami
               <Image source={{ uri: user.avatarUrl }} style={modalStyles.avatar} />
             ) : (
               <LinearGradient
-                colors={user?.color ? [user.color, user.color] : ['#FF8A80', '#7986CB']}
+                colors={user?.color ? [user.color, user.color] : [colors.primary, colors.secondary]}  // via thème
                 style={modalStyles.avatarFallback}
               >
                 <Text style={modalStyles.avatarEmoji}>{user?.avatar || '👤'}</Text>
@@ -393,7 +608,7 @@ function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, fami
 
           {/* Tribs */}
           <LinearGradient
-            colors={['#FFD54F', '#FF8A80']}
+            colors={['#FFD54F', colors.primary]}  // via thème pour la 2ème couleur (accent)
             style={modalStyles.tribsCard}
           >
             <Text style={modalStyles.tribsNumber}>{user?.tribs || 0}</Text>
@@ -434,198 +649,3 @@ function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, fami
     </Modal>
   );
 }
-
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  content: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    marginHorizontal: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    maxWidth: 320,
-    width: '100%',
-  },
-
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-
-  avatarFallback: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-
-  avatarEmoji: {
-    fontSize: 32,
-  },
-
-  roleBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-  },
-
-  roleBadgeText: {
-    fontSize: 12,
-  },
-
-  userName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-
-  userRole: {
-    fontSize: 14,
-    color: '#4a5568',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-
-  userEmail: {
-    fontSize: 12,
-    color: '#718096',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-
-  familyInfo: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  familyLabel: {
-    fontSize: 14,
-    color: '#4a5568',
-    marginBottom: 4,
-  },
-
-  familyName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-
-  tribsCard: {
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginBottom: 24,
-    alignItems: 'center',
-    shadowColor: '#FFD54F',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-
-  tribsNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-
-  tribsLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-
-  actions: {
-    width: '100%',
-    gap: 12,
-  },
-
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f7fafc',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 8,
-  },
-
-  signOutButton: {
-    backgroundColor: '#fed7d7',
-    borderColor: '#feb2b2',
-  },
-
-  actionButtonIcon: {
-    fontSize: 16,
-  },
-
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-
-  signOutButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#c53030',
-  },
-
-  modeText: {
-    fontSize: 12,
-    color: '#718096',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-});

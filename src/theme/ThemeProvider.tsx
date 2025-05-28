@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { Theme } from './theme.types';
-import adultTheme from './theme.adult';
-import teenTheme from './theme.teen';
-import childTheme from './theme.child';
 import { useAuth } from '../hooks/useAuth';
+import adultTheme from './theme.adult';
+import childTheme from './theme.child';
+import teenTheme from './theme.teen';
+import { Theme } from './theme.types';
 
 const ThemeContext = createContext<Theme>(adultTheme);
 
