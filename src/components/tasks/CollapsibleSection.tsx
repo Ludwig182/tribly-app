@@ -1,6 +1,6 @@
-// src/components/tasks/CollapsibleSection.tsx - Version thématique
+// src/components/tasks/CollapsibleSection.tsx - Version FlatList/swipe compatible
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import TaskItem from './TaskItem';
 
@@ -24,6 +24,7 @@ interface CollapsibleSectionProps {
   emoji: string;
   onCompleteTask: (taskId: number) => void;
   onDeleteTask?: (taskId: number) => void;
+  onMarkAsNotDone?: (taskId: number, penalty: number) => void;   // 👈 AJOUTE MOI !
   currentUserRole?: string;
   getTaskUrgency: (dueDate?: Date) => { text: string; color: string; emoji: string };
 }
@@ -35,8 +36,12 @@ export default function CollapsibleSection({
   onToggle, 
   emoji,
   onCompleteTask,
+  onDeleteTask,
+  onMarkAsNotDone,     // ← AJOUTE MOI ICI
+  currentUserRole,
   getTaskUrgency
 }: CollapsibleSectionProps) {
+
   const { colors } = useTheme();
 
   return (
@@ -59,15 +64,25 @@ export default function CollapsibleSection({
           ›
         </Text>
       </TouchableOpacity>
-      
-      {isExpanded && tasks.map(task => (
-        <TaskItem 
-          key={task.id} 
-          task={task} 
-          onComplete={onCompleteTask}
-          getTaskUrgency={getTaskUrgency}
+
+      {isExpanded && (
+        <FlatList
+          data={tasks}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => (
+            <TaskItem 
+            task={item}
+            onComplete={onCompleteTask}
+            onDelete={onDeleteTask}
+            onMarkAsNotDone={onMarkAsNotDone}    // 👈 PASSE MOI BIEN ICI !
+            currentUserRole={currentUserRole}
+            getTaskUrgency={getTaskUrgency}
+          />
+          )}
+          scrollEnabled={false}         // << C'est ça qui est CRUCIAL !
+          contentContainerStyle={{ paddingBottom: 4 }}
         />
-      ))}
+      )}
     </View>
   );
 }
@@ -76,7 +91,6 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 25,
   },
-  
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -92,12 +106,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
   },
-
   chevron: {
     fontSize: 20,
     fontWeight: '600',

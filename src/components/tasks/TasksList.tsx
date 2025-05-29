@@ -29,8 +29,13 @@ export default function TasksList({
   expandedSections,
   toggleSection,
   onComplete,
-  onUndo
+  onUndo,
+  onDelete,           // 👈 OBLIGATOIRE
+  onMarkAsNotDone,    // 👈 OBLIGATOIRE SI UTILISÉ
+  currentUserRole,
+  getTaskUrgency
 }: Props) {
+
   return (
     <ScrollView style={styles.content}>
       {urgent.length > 0 && (
@@ -41,6 +46,9 @@ export default function TasksList({
           onToggle={() => toggleSection('urgent')}
           emoji="🔥"
           onCompleteTask={onComplete}
+          onDeleteTask={onDelete}                // 👈
+          onMarkAsNotDone={onMarkAsNotDone}  // 👈 AJOUTE MOI !
+          currentUserRole={currentUserRole}
           getTaskUrgency={getTaskUrgency}
         />
       )}
@@ -52,6 +60,9 @@ export default function TasksList({
         onToggle={() => toggleSection('thisWeek')}
         emoji="📅"
         onCompleteTask={onComplete}
+        onDeleteTask={onDelete}                // 👈
+        onMarkAsNotDone={onMarkAsNotDone}  // 👈 AJOUTE MOI !
+        currentUserRole={currentUserRole}
         getTaskUrgency={getTaskUrgency}
       />
 
@@ -62,6 +73,9 @@ export default function TasksList({
         onToggle={() => toggleSection('later')}
         emoji="📋"
         onCompleteTask={onComplete}
+        onDeleteTask={onDelete}                // 👈
+        onMarkAsNotDone={onMarkAsNotDone}  // 👈 AJOUTE MOI !
+        currentUserRole={currentUserRole}
         getTaskUrgency={getTaskUrgency}
       />
 

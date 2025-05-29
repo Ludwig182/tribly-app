@@ -10,6 +10,7 @@ import TasksList from './TasksList';
 import AddTaskModal from './AddTaskModal';
 import { Task } from '../../types/task';
 import { getExampleTasks, getMemberColor, getTaskUrgency } from '@/utils/tasksHelpers';
+import { familyService } from '../../services/familyService';
 // src/utils/tasksHelpers.ts - Version corrigée pour les dates
 import { Timestamp } from 'firebase/firestore';
 
@@ -226,6 +227,7 @@ export default function TasksContainer() {
         onComplete={completeTask}
         onUndo={undoTask}
         onDelete={deleteTask}
+        onMarkAsNotDone={markTaskAsNotDone}
         currentUserRole={familyMember?.role}
         getTaskUrgency={getTaskUrgency}
       />

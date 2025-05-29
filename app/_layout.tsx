@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -13,7 +14,16 @@ import AuthTestScreen from '@/components/auth/AuthTestScreen';
 
 import ThemeProvider from '@/theme/ThemeProvider';   // ← ton provider adaptatif
 
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+export default function RootLayout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <AppContent />
+        <StatusBar style="auto" />
+      </AuthProvider>
+    </GestureHandlerRootView>
+  );
+}
 
 // 🎯 Composant App principal avec logique auth
 function AppContent() {
@@ -50,17 +60,6 @@ function AppContent() {
         </Stack>
       </ThemeProvider>
     </NavigationThemeProvider>
-  );
-}
-
-export default function RootLayout() {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <AppContent />
-        <StatusBar style="auto" />
-      </AuthProvider>
-    </GestureHandlerRootView>
   );
 }
 
