@@ -15,6 +15,10 @@ interface Props {
   toggleSection: (s: 'urgent' | 'thisWeek' | 'later') => void;
   onComplete: (id: string) => void;
   onUndo: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onMarkAsNotDone?: (id: string, penalty: number) => void;
+  currentUserRole?: string;
+  getTaskUrgency: (dueDate?: Date) => { text: string; color: string; emoji: string };
 }
 
 export default function TasksList({

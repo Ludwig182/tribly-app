@@ -23,6 +23,8 @@ interface CollapsibleSectionProps {
   onToggle: () => void;
   emoji: string;
   onCompleteTask: (taskId: number) => void;
+  onDeleteTask?: (taskId: number) => void;
+  currentUserRole?: string;
   getTaskUrgency: (dueDate?: Date) => { text: string; color: string; emoji: string };
 }
 

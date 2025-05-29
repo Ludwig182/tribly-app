@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import TaskItem from './TaskItem';
 import { Task } from '../../types/task';
+import { formatCompletedTime } from '../../utils/tasksHelpers';
 
 interface Props {
   tasks: Task[];
@@ -15,7 +16,7 @@ export default function CompletedTasksList({ tasks, onUncomplete, getTaskUrgency
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>✅ Tâches terminées aujourd’hui</Text>
+      <Text style={styles.title}>✅ Tâches terminées aujourd'hui</Text>
 
       {tasks.map((t) => (
        <TaskItem
@@ -23,6 +24,7 @@ export default function CompletedTasksList({ tasks, onUncomplete, getTaskUrgency
           task={t}
           onUncomplete={() => onUncomplete(t.id)}
           getTaskUrgency={getTaskUrgency}
+          formatCompletedTime={formatCompletedTime}
         />
       ))}
     </View>

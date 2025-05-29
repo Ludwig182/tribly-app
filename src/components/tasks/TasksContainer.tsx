@@ -9,7 +9,7 @@ import TasksHeader from './TasksHeader';
 import TasksList from './TasksList';
 import AddTaskModal from './AddTaskModal';
 import { Task } from '../../types/task';
-import { getExampleTasks, getMemberColor, getTaskUrgency } from '../../utils/tasksHelpers';
+import { getExampleTasks, getMemberColor, getTaskUrgency } from '@/utils/tasksHelpers';
 // src/utils/tasksHelpers.ts - Version corrigée pour les dates
 import { Timestamp } from 'firebase/firestore';
 
@@ -140,31 +140,61 @@ export default function TasksContainer() {
     if (familyId && isAuthenticated) await tasksService.uncompleteTask(familyId, id, familyMember?.id);
   };
 
-  // 🗑️ Supprimer une tâche (adultes seulement)
+// 🗑️ Supprimer une tâche (adultes seulement)
   const deleteTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
+    // Retirer de l'affichage local immédiatement
+    setTasks(ts => ts.filter(t => t.id !== id));
+    
+    if (familyId && isAuthenticated) {
+      try {
+        await tasksService.deleteTask(familyId, id, familyMember?.id);
+      } catch (error) {
+        console.error('❌ Erreur suppression tâche:', error);
+        // Remettre la tâche si erreur
+        setTasks(ts => [...ts, task]);
+        Alert.alert('❌ Erreur', 'Impossible de supprimer la tâche');
+      }
+    }
+  };
+
+  // ❌ Marquer une tâche comme "non faite" avec pénalité
+  const markTaskAsNotDone = async (id: string, penalty: number) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
     Alert.alert(
-      '🗑️ Supprimer la tâche',
-      `Êtes-vous sûr de vouloir supprimer "${task.title}" ?`,
+      '❌ Tâche non faite',
+      `${task.assignee} va perdre ${penalty} Tribs pour ne pas avoir fait cette tâche.`,
       [
         { text: 'Annuler', style: 'cancel' },
         { 
-          text: 'Supprimer', 
+          text: 'Confirmer', 
           style: 'destructive',
           onPress: async () => {
-            // Retirer de l'affichage local immédiatement
+            // Retirer la tâche de l'affichage
             setTasks(ts => ts.filter(t => t.id !== id));
             
-            if (familyId && isAuthenticated) {
+            if (familyId && isAuthenticated && task.assigneeId) {
               try {
+                // 1. Retirer les Tribs (pénalité)
+                await familyService.updateMemberTribs(familyId, task.assigneeId, -penalty);
+                
+                // 2. Supprimer la tâche
                 await tasksService.deleteTask(familyId, id, familyMember?.id);
+                
+                Alert.alert(
+                  '✅ Appliqué',
+                  `${task.assignee} a perdu ${penalty} Tribs.`,
+                  [{ text: 'OK' }]
+                );
               } catch (error) {
-                console.error('❌ Erreur suppression tâche:', error);
+                console.error('❌ Erreur tâche non faite:', error);
                 // Remettre la tâche si erreur
                 setTasks(ts => [...ts, task]);
-                Alert.alert('❌ Erreur', 'Impossible de supprimer la tâche');
+                Alert.alert('❌ Erreur', 'Impossible d\'appliquer la pénalité');
               }
             }
           }

@@ -1,27 +1,30 @@
-// src/components/tasks/TaskItem.tsx - Version thématique (boutons seulement)
+// src/components/tasks/TaskItem.tsx - Version avec swipe pour supprimer
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Alert, Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PanGestureHandler, RectButton, Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../theme/useTheme';
 
 interface Task {
-  id: number;
+  id: number | string;
   title: string;
   assignee: string;
   tribs: number;
   status: 'pending' | 'completed';
-  color: string[]; // 👈 Garder les couleurs membres (reconnaissance familiale)
+  color: string[];
   dueDate?: Date;
   completedAt?: string;
   completedDate?: Date;
+  assigneeId?: string;
 }
 
 interface TaskItemProps {
   task: Task;
-  onComplete: (taskId: number) => void;
-  onUncomplete?: (taskId: number) => void;
-  onDelete?: (taskId: number) => void; // 🗑️ Nouveau prop
-  currentUserRole?: string; // 🔐 Rôle pour permissions
+  onComplete: (taskId: number | string) => void;
+  onUncomplete?: (taskId: number | string) => void;
+  onDelete?: (taskId: number | string) => void;
+  onMarkAsNotDone?: (taskId: number | string, penalty: number) => void;
+  currentUserRole?: string;
   getTaskUrgency: (dueDate?: Date) => { text: string; color: string; emoji: string };
   formatCompletedTime?: (completedDate?: Date, completedAt?: string) => string;
 }
@@ -31,16 +34,112 @@ export default function TaskItem({
   onComplete, 
   onUncomplete, 
   onDelete,
+  onMarkAsNotDone,
   currentUserRole,
   getTaskUrgency, 
   formatCompletedTime 
 }: TaskItemProps) {
   const { colors } = useTheme();
   const urgency = getTaskUrgency(task.dueDate);
+  const swipeableRef = useRef<Swipeable>(null);
 
   // 🔐 Permissions pour supprimer (adultes seulement)
   const canDelete = currentUserRole === 'admin' || currentUserRole === 'parent';
 
+  // 🎯 Calcul de la pénalité (50% des Tribs, arrondi inférieur)
+  const penalty = Math.floor(task.tribs / 2);
+
+  // 🗑️ Gestion de la suppression simple
+  const handleDelete = () => {
+    Alert.alert(
+      '🗑️ Supprimer la tâche',
+      `Êtes-vous sûr de vouloir supprimer "${task.title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel', onPress: () => swipeableRef.current?.close() },
+        { 
+          text: 'Supprimer', 
+          style: 'destructive',
+          onPress: () => {
+            swipeableRef.current?.close();
+            onDelete?.(task.id);
+          }
+        }
+      ]
+    );
+  };
+
+  // ❌ Gestion de "tâche non faite" avec pénalité
+  const handleNotDone = () => {
+    Alert.alert(
+      '❌ Marquer comme non faite',
+      `Cette action va retirer ${penalty} Tribs à ${task.assignee}.\n\nÊtes-vous sûr que la tâche n'a pas été faite ?`,
+      [
+        { text: 'Annuler', style: 'cancel', onPress: () => swipeableRef.current?.close() },
+        { 
+          text: 'Confirmer', 
+          style: 'destructive',
+          onPress: () => {
+            swipeableRef.current?.close();
+            onMarkAsNotDone?.(task.id, penalty);
+          }
+        }
+      ]
+    );
+  };
+
+  // 🎨 Rendu des actions swipe
+  const renderRightActions = (progress: Animated.AnimatedInterpolation, dragX: Animated.AnimatedInterpolation) => {
+    if (!canDelete || task.status === 'completed') return null;
+
+    const trans = dragX.interpolate({
+      inputRange: [-200, -100, 0],
+      outputRange: [0, 0, 100],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <View style={styles.rightActionsContainer}>
+        {/* Action "Non faite" avec pénalité */}
+        <Animated.View
+          style={[
+            styles.actionAnimated,
+            {
+              transform: [{ translateX: trans }],
+            },
+          ]}
+        >
+          <RectButton
+            style={[styles.rightAction, { backgroundColor: colors.system?.warning || '#FF9800' }]}
+            onPress={handleNotDone}
+          >
+            <Text style={styles.actionIcon}>❌</Text>
+            <Text style={styles.actionText}>Non faite</Text>
+            <Text style={styles.penaltyText}>-{penalty} Tribs</Text>
+          </RectButton>
+        </Animated.View>
+
+        {/* Action "Supprimer" */}
+        <Animated.View
+          style={[
+            styles.actionAnimated,
+            {
+              transform: [{ translateX: trans }],
+            },
+          ]}
+        >
+          <RectButton
+            style={[styles.rightAction, { backgroundColor: colors.dangerBackground || '#F44336' }]}
+            onPress={handleDelete}
+          >
+            <Text style={styles.actionIcon}>🗑️</Text>
+            <Text style={styles.actionText}>Supprimer</Text>
+          </RectButton>
+        </Animated.View>
+      </View>
+    );
+  };
+
+  // 🎯 Rendu pour tâche complétée (non swipeable)
   if (task.status === 'completed') {
     return (
       <TouchableOpacity 
@@ -65,7 +164,6 @@ export default function TaskItem({
             </Text>
           </View>
           <View style={styles.taskRight}>
-            {/* 👈 Badge Tribs : Garder les couleurs membres */}
             <LinearGradient
               colors={task.color}
               style={styles.tribsBadgeCompleted}
@@ -84,7 +182,8 @@ export default function TaskItem({
     );
   }
 
-  return (
+  // 🎯 Rendu pour tâche en cours (swipeable)
+  const taskContent = (
     <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.taskHeader}>
         <View style={styles.taskInfo}>
@@ -96,7 +195,6 @@ export default function TaskItem({
           </Text>
         </View>
         <View style={styles.taskRight}>
-          {/* 👈 Badge Tribs : Garder les couleurs membres */}
           <LinearGradient
             colors={task.color}
             style={styles.tribsBadge}
@@ -109,46 +207,40 @@ export default function TaskItem({
         </View>
       </View>
       
-      {/* 👈 Bouton completion : Thématique */}
-      <View style={styles.taskActions}>
-        <TouchableOpacity 
-          style={[
-            styles.completeBtn,
-            { 
-              backgroundColor: colors.overlayLight || 'rgba(76, 187, 120, 0.1)',
-              borderColor: colors.primary,
-              flex: canDelete ? 1 : undefined,
-              marginRight: canDelete ? 8 : 0
-            }
-          ]}
-          onPress={() => onComplete(task.id)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.completeBtnText, { color: colors.primary }]}>
-            ✓ Marquer comme terminé
-          </Text>
-        </TouchableOpacity>
-
-        {/* 🗑️ Bouton supprimer (adultes seulement) */}
-        {canDelete && onDelete && (
-          <TouchableOpacity 
-            style={[
-              styles.deleteBtn,
-              { 
-                backgroundColor: colors.dangerBackground || 'rgba(244, 67, 54, 0.1)',
-                borderColor: colors.dangerBorder || '#f44336'
-              }
-            ]}
-            onPress={() => onDelete(task.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.deleteBtnText, { color: colors.dangerText || '#d32f2f' }]}>
-              🗑️
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <TouchableOpacity 
+        style={[
+          styles.completeBtn,
+          { 
+            backgroundColor: colors.overlayLight || 'rgba(76, 187, 120, 0.1)',
+            borderColor: colors.primary,
+          }
+        ]}
+        onPress={() => onComplete(task.id)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.completeBtnText, { color: colors.primary }]}>
+          ✓ Marquer comme terminé
+        </Text>
+      </TouchableOpacity>
     </View>
+  );
+
+  // Si l'utilisateur ne peut pas supprimer, afficher sans swipe
+  if (!canDelete) {
+    return taskContent;
+  }
+
+  // Sinon, afficher avec swipe
+  return (
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      rightThreshold={40}
+      overshootRight={false}
+      friction={2}
+    >
+      {taskContent}
+    </Swipeable>
   );
 }
 
@@ -245,5 +337,44 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+
+  // Styles pour les actions swipe
+  rightActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  actionAnimated: {
+    height: '100%',
+    justifyContent: 'center',
+  },
+
+  rightAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    height: '100%',
+    minWidth: 80,
+  },
+
+  actionIcon: {
+    fontSize: 20,
+    color: 'white',
+    marginBottom: 4,
+  },
+
+  actionText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  penaltyText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
+    opacity: 0.9,
   },
 });
