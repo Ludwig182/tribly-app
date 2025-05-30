@@ -1,651 +1,888 @@
-import { useTheme } from '@/theme/ThemeProvider';
+// src/components/home/HomeScreen.tsx - REFONTE COMPLÈTE
+import React, { useRef, useState, useEffect } from 'react';
+import { 
+  Image, 
+  Modal, 
+  SafeAreaView, 
+  ScrollView, 
+  StyleSheet, 
+  Text, 
+  TouchableOpacity, 
+  View,
+  Animated,
+  Dimensions,
+  Platform,
+  StatusBar
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import { Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useTheme } from '@/theme/ThemeProvider';
 
-// Import des composants
-import AISuggestion from './AISuggestion';
-import FamilyActivity from './FamilyActivity';
-import PrioritiesList from './PrioritiesList';
-import QuickActions from './QuickActions';
-import TribsOverview from './TribsOverview';
+// Import des composants refactorés
+// Si les fichiers n'existent pas encore, commentez temporairement ces imports
+// import TribsHeroCard from './TribsHeroCard';
+// import PrioritiesCarousel from './PrioritiesCarousel';
+// import QuickActionsGrid from './QuickActionsGrid';
+// import FamilyActivityFeed from './FamilyActivityFeed';
+import FloatingMoodIndicator from './FloatingMoodIndicator';
 
 // Import des hooks
 import { useAuth } from '../../hooks/useAuth';
 import { useFamily } from '../../hooks/useFamily';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 export default function HomeScreen() {
-  // 🔐 Données d'authentification
+  const { colors, fontSizeBase, fontFamily } = useTheme();
   const { userName, familyMember, userRole, isAuthenticated, signOut } = useAuth();
-  // 🗃️ État pour le modal de profil
-  const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const { colors, fontSizeBase, fontFamily } = useTheme();  // ← Utilisation du thème (couleurs, taille base, police)
-  // 👥 Données famille
   const { familyData, currentMember, stats, familyName, loading } = useFamily();
 
-  // 📊 Construire les données pour les composants (avec fallback)
-  const familyMembers = familyData?.members || [];
-  
-  // 🎯 Fonctions utilitaires
-  const calculateAge = (birthDate) => {
-    if (!birthDate) return 12; // Fallback
-    const birth = new Date(birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return Math.max(0, age);
-  };
+  // États et animations
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerOpacity = useRef(new Animated.Value(1)).current;
+  const [greeting, setGreeting] = useState('');
+  const [timeEmoji, setTimeEmoji] = useState('');
 
-  const getRandomStatus = () => {
-    const statuses = [
-      '🔥 Série active !',
-      '📚 Super week !',
-      '⭐ En forme !',
-      '🎯 Concentré(e)',
-      '💪 Motivé(e)'
-    ];
-    return statuses[Math.floor(Math.random() * statuses.length)];
-  };
+  // Animation d'entrée
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
-  const getNextReward = (currentTribs) => {
-    const rewards = [
-      { threshold: 50, reward: '🍦 Glace bonus' },
-      { threshold: 100, reward: '🎮 Temps d\'écran +30min' },
-      { threshold: 200, reward: '🎬 Sortie cinéma' },
-      { threshold: 300, reward: '🎪 Parc d\'attractions' }
-    ];
+  useEffect(() => {
+    // Animation d'entrée
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Mise à jour du greeting
+    updateGreeting();
+    const interval = setInterval(updateGreeting, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const updateGreeting = () => {
+    const hour = new Date().getHours();
+    let greet, emoji;
     
-    const nextReward = rewards.find(r => currentTribs < r.threshold);
-    if (nextReward) {
-      const remaining = nextReward.threshold - currentTribs;
-      return `${nextReward.reward} dans ${remaining} Tribs`;
+    if (hour < 6) {
+      greet = 'Bonne nuit';
+      emoji = '🌙';
+    } else if (hour < 12) {
+      greet = 'Bonjour';
+      emoji = '☀️';
+    } else if (hour < 18) {
+      greet = 'Bon après-midi';
+      emoji = '🌤️';
+    } else if (hour < 22) {
+      greet = 'Bonsoir';
+      emoji = '🌆';
+    } else {
+      greet = 'Bonne soirée';
+      emoji = '✨';
     }
-    return '🏆 Champion ! Nouveaux défis bientôt';
+    
+    setGreeting(greet);
+    setTimeEmoji(emoji);
   };
 
+  // Parallax header effect
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 150],
+    outputRange: [0, -50],
+    extrapolate: 'clamp',
+  });
+
+  const headerScale = scrollY.interpolate({
+    inputRange: [-100, 0],
+    outputRange: [1.2, 1],
+    extrapolate: 'clamp',
+  });
+
+  // Construction des données (garde la logique existante)
+  const familyMembers = familyData?.members || [];
   const displayData = {
-    members: familyMembers.map(member => ({
-      name: member.name,
-      initial: member.name[0],
-      color: member.color ? [member.color, member.color] : [colors.primary, colors.secondary],  // via thème
-      online: member.status === 'online' || true
-    })),
     parent: userName || currentMember?.name || 'Utilisateur',
     familyName: familyName || 'Famille',
     children: familyMembers
       .filter(member => member.role === 'child')
       .map(child => ({
         name: child.name,
-        age: child.birthDate ? calculateAge(child.birthDate) : 12, // Fallback age
-        emoji: child.avatar || '😊',
         tribs: child.tribs || 0,
-        maxTribs: 300, // TODO: Configurable per child
-        streak: Math.floor(Math.random() * 7) + 1, // TODO: Calculate real streak
-        status: getRandomStatus(),
-        nextReward: getNextReward(child.tribs || 0),
-        color: child.color ? [child.color, child.color] : [colors.primary, colors.secondary]  // via thème
+        avatar: child.avatar || '😊',
+        color: child.color ? [child.color, child.color] : [colors.primary, colors.secondary]
       })),
-    familyGoal: {
-      current: stats.totalTribs || 0,
-      target: 500,
-      reward: '🎢 Parc d\'attractions',
-      remaining: Math.max(0, 500 - (stats.totalTribs || 0))
-    },
     priorities: [
-      // TODO: Intégrer avec système de calendrier/tâches
-      { time: '15:30', title: 'Dentiste Clémentine', details: 'Dr. Martin • Emmener Clémentine', urgent: true },
-      { time: '18:00', title: 'Préparer dîner', details: 'Menu: Pâtes bolognaise • 4 personnes', urgent: false }
+      { id: '1', time: '15:30', title: 'Dentiste Clémentine', emoji: '🦷', urgent: true },
+      { id: '2', time: '18:00', title: 'Préparer dîner', emoji: '🍽️', urgent: false }
     ],
-    familyActivity: [
-      { time: '16:00', title: 'Entraînement foot Jacob', details: 'Ludwig l\'accompagne • Stade municipal' }
-    ]
+    mood: 'energetic' // Statique pour l'instant
   };
 
   const quickActions = [
-    {
-      title: 'Calendrier',
-      subtitle: '4 événements',
-      emoji: '📅',
-      colors: [colors.primary, colors.secondary]  // via thème (anciennement #FF8A80, #7986CB)
-    },
-    {
-      title: 'Tâches',
-      subtitle: `${stats.tasks.todo || 0} à faire`,
-      emoji: '✅',
-      colors: ['#48bb78', '#38a169']  // (couleurs spécifiques conservées)
-    },
-    {
-      title: 'Courses',
-      subtitle: `${stats.shopping.toBuy || 0} articles`,
-      emoji: '🛒',
-      colors: ['#FFCC80', '#A29BFE']  // (couleurs spécifiques conservées)
-    },
-    {
-      title: 'Famille',
-      subtitle: `${stats.totalMembers || 0} membres`,
-      emoji: '👨‍👩‍👧‍👦',
-      colors: [colors.secondary, colors.primary]  // via thème (anciennement #7986CB, #FF8A80)
-    }
+    { id: '1', title: 'Calendrier', count: '4', emoji: '📅', colors: [colors.primary, colors.secondary] },
+    { id: '2', title: 'Tâches', count: `${stats.tasks.todo || 0}`, emoji: '✅', colors: ['#48bb78', '#38a169'] },
+    { id: '3', title: 'Courses', count: `${stats.shopping.toBuy || 0}`, emoji: '🛒', colors: ['#FFCC80', '#A29BFE'] },
+    { id: '4', title: 'Famille', count: `${stats.totalMembers || 0}`, emoji: '👨‍👩‍👧‍👦', colors: [colors.secondary, colors.primary] }
   ];
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
-    return 'Bonsoir';
-  };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,  // thème.colors.background
-    },
-
-    // Loading
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-
-    loadingText: {
-      fontSize: fontSizeBase * 1,         // basé sur thème.fontSizeBase
-      color: colors.textSecondary,
-      fontFamily: fontFamily,
-    },
-
-    header: {
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 25,
-      borderBottomLeftRadius: 25,
-      borderBottomRightRadius: 25,
-    },
-
-    headerTop: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-    },
-
-    logoSection: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-
-    logo: {
-      width: 40,
-      height: 40,
-      backgroundColor: colors.card,
-      borderRadius: 10,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-
-    logoEmoji: {
-      fontSize: fontSizeBase * 1.25,
-      fontFamily: fontFamily,
-    },
-
-    welcomeTitle: {
-      fontSize: fontSizeBase * 1.5,
-      fontWeight: '700',
-      color: colors.onPrimary,
-      marginBottom: 5,
-      fontFamily: fontFamily,
-    },
-
-    welcomeSubtitle: {
-      fontSize: fontSizeBase * 0.875,
-      color: colors.onPrimary,
-      opacity: 0.9,
-      fontFamily: fontFamily,
-    },
-
-    profileBtn: {
-      width: 45,
-      height: 45,
-      backgroundColor: colors.overlayLight,
-      borderRadius: 22.5,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: colors.overlayLightStrong,
-    },
-
-    profileImage: {
-      width: 41,
-      height: 41,
-      borderRadius: 20.5,
-    },
-
-    profileEmoji: {
-      fontSize: fontSizeBase * 1.125,
-      color: colors.onPrimary,
-      fontFamily: fontFamily,
-    },
-
-    content: {
-      paddingHorizontal: 20,
-      paddingTop: 20,
-    },
-
-    bottomSpacer: {
-      height: 100,
-    },
-  });
-
-  // 🔄 Si loading, afficher loading
-  if (loading) {
+  if (loading || !familyData) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Chargement magique en cours...
+          </Text>
+        </Animated.View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header avec gradient */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Header moderne avec blur effect */}
+      <Animated.View 
+        style={[
+          styles.headerContainer,
+          {
+            transform: [
+              { translateY: headerTranslateY },
+              { scale: headerScale }
+            ],
+          }
+        ]}
+      >
         <LinearGradient 
           colors={[colors.primary, colors.secondary]}
-          style={styles.header}
+          style={styles.headerGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <View style={styles.headerTop}>
-            <View style={styles.logoSection}>
-              <View style={styles.logo}>
-                <Text style={styles.logoEmoji}>👨‍👩‍👧‍👦</Text>
-              </View>
-              <View>
-                <Text style={styles.welcomeTitle}>{getGreeting()} {displayData.parent} !</Text>
-                <Text style={styles.welcomeSubtitle}>
-                  {displayData.familyName} • {stats.totalMembers || 0} membres
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.profileBtn}
-              onPress={() => setProfileModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              {familyMember?.avatarUrl ? (
-                <Image source={{ uri: familyMember.avatarUrl }} style={styles.profileImage} />
-              ) : (
-                <Text style={styles.profileEmoji}>
-                  {familyMember?.avatar || '👤'}
-                </Text>
-              )}
-            </TouchableOpacity>
+          {/* Pattern décoratif */}
+          <View style={styles.headerPattern}>
+            <View style={[styles.circle, styles.circle1]} />
+            <View style={[styles.circle, styles.circle2]} />
+            <View style={[styles.circle, styles.circle3]} />
           </View>
-        </LinearGradient>
 
-        <View style={styles.content}>
-          {/* Tableau des Tribs */}
-          <TribsOverview 
-            children={displayData.children}
-            familyGoal={displayData.familyGoal}
-          />
-
-          {/* Mes priorités aujourd'hui */}
-          <PrioritiesList priorities={displayData.priorities} />
-
-          {/* Famille en action */}
-          <FamilyActivity 
-            activities={displayData.familyActivity}
-            members={displayData.members}
-          />
-
-          {/* Suggestion IA Premium */}
-          <AISuggestion
-            suggestion="Système intelligent activé ! Connectez-vous avec vos tâches pour des suggestions personnalisées."
-            actionText="Découvrir"
-          />
-
-          {/* Actions rapides */}
-          <QuickActions actions={quickActions} />
-
-          {/* Espace pour la navigation */}
-          <View style={styles.bottomSpacer} />
-        </View>
-      </ScrollView>
-      {/* Modal de profil */}
-      <ProfileModal
-        visible={profileModalVisible}
-        onClose={() => setProfileModalVisible(false)}
-        user={familyMember}
-        isAuthenticated={isAuthenticated}
-        onSignOut={signOut}
-        familyName={familyName}
-      />
-    </SafeAreaView>
-  );
-}
-
-function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, familyName }) {
-  const { colors, fontSizeBase, fontFamily } = useTheme();  // thème accessible dans le modal
-
-  const handleSignOut = async () => {
-    try {
-      await onSignOut();
-      onClose();
-    } catch (error) {
-      console.error('❌ Erreur déconnexion:', error);
-    }
-  };
-
-  const modalStyles = StyleSheet.create({
-    overlay: {
-      flex: 1,
-      backgroundColor: colors.overlayDark,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-
-    content: {
-      backgroundColor: colors.card,
-      borderRadius: 20,
-      padding: 30,
-      alignItems: 'center',
-      marginHorizontal: 40,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
-      maxWidth: 320,
-      width: '100%',
-    },
-
-    avatarContainer: {
-      position: 'relative',
-      marginBottom: 20,
-    },
-
-    avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      borderWidth: 3,
-      borderColor: colors.card,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 1,
-      shadowRadius: 8,
-      elevation: 6,
-    },
-
-    avatarFallback: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 3,
-      borderColor: colors.card,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 1,
-      shadowRadius: 8,
-      elevation: 6,
-    },
-
-    avatarEmoji: {
-      fontSize: fontSizeBase * 2,
-      fontFamily: fontFamily,
-    },
-
-    roleBadge: {
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.card,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: colors.border,
-    },
-
-    roleBadgeText: {
-      fontSize: fontSizeBase * 0.75,
-      color: colors.text,
-      fontFamily: fontFamily,
-    },
-
-    userName: {
-      fontSize: fontSizeBase * 1.375,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 4,
-      textAlign: 'center',
-      fontFamily: fontFamily,
-    },
-
-    userRole: {
-      fontSize: fontSizeBase * 0.875,
-      color: colors.textSecondary,
-      marginBottom: 8,
-      textAlign: 'center',
-      fontFamily: fontFamily,
-    },
-
-    userEmail: {
-      fontSize: fontSizeBase * 0.75,
-      color: colors.textTertiary,
-      marginBottom: 16,
-      textAlign: 'center',
-      fontFamily: fontFamily,
-    },
-
-    familyInfo: {
-      alignItems: 'center',
-      marginBottom: 20,
-    },
-
-    familyLabel: {
-      fontSize: fontSizeBase * 0.875,
-      color: colors.textSecondary,
-      marginBottom: 4,
-      fontFamily: fontFamily,
-    },
-
-    familyName: {
-      fontSize: fontSizeBase * 1,
-      fontWeight: '600',
-      color: colors.text,
-      fontFamily: fontFamily,
-    },
-
-    tribsCard: {
-      borderRadius: 12,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      marginBottom: 24,
-      alignItems: 'center',
-      shadowColor: '#FFD54F',  // (couleur fixe pour effet doré)
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      elevation: 4,
-    },
-
-    tribsNumber: {
-      fontSize: fontSizeBase * 1.5,
-      fontWeight: '700',
-      color: colors.onPrimary,
-      textShadowColor: colors.shadow,
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-      fontFamily: fontFamily,
-    },
-
-    tribsLabel: {
-      fontSize: fontSizeBase * 0.75,
-      color: colors.onPrimary,
-      opacity: 0.9,
-      fontWeight: '600',
-      textShadowColor: colors.shadow,
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-      fontFamily: fontFamily,
-    },
-
-    actions: {
-      width: '100%',
-      gap: 12,
-    },
-
-    actionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.background,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 8,
-    },
-
-    signOutButton: {
-      backgroundColor: colors.dangerBackground,
-      borderColor: colors.dangerBorder,
-    },
-
-    actionButtonIcon: {
-      fontSize: fontSizeBase * 1,
-      fontFamily: fontFamily,
-    },
-
-    actionButtonText: {
-      fontSize: fontSizeBase * 0.875,
-      fontWeight: '600',
-      color: colors.text,
-      fontFamily: fontFamily,
-    },
-
-    signOutButtonText: {
-      fontSize: fontSizeBase * 0.875,
-      fontWeight: '600',
-      color: colors.dangerText,
-      fontFamily: fontFamily,
-    },
-
-    modeText: {
-      fontSize: fontSizeBase * 0.75,
-      color: colors.textTertiary,
-      marginTop: 16,
-      textAlign: 'center',
-      fontFamily: fontFamily,
-    },
-  });
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent={true}
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity 
-        style={modalStyles.overlay} 
-        activeOpacity={1} 
-        onPress={onClose}
-      >
-        <TouchableOpacity 
-          style={modalStyles.content} 
-          activeOpacity={1}
-          onPress={() => {}} // Empêcher la fermeture lors du clic sur le contenu
-        >
-          {/* Avatar */}
-          <View style={modalStyles.avatarContainer}>
-            {user?.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={modalStyles.avatar} />
-            ) : (
-              <LinearGradient
-                colors={user?.color ? [user.color, user.color] : [colors.primary, colors.secondary]}  // via thème
-                style={modalStyles.avatarFallback}
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              {/* Greeting Section */}
+              <Animated.View 
+                style={[
+                  styles.greetingSection,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }]
+                  }
+                ]}
               >
-                <Text style={modalStyles.avatarEmoji}>{user?.avatar || '👤'}</Text>
-              </LinearGradient>
-            )}
-            
-            {/* Badge du rôle */}
-            <View style={modalStyles.roleBadge}>
-              <Text style={modalStyles.roleBadgeText}>
-                {user?.role === 'admin' ? '👑' : user?.role === 'parent' ? '👤' : '⭐'}
+                <Text style={styles.timeEmoji}>{timeEmoji}</Text>
+                <View>
+                  <Text style={styles.greetingText}>{greeting},</Text>
+                  <Text style={styles.userName}>{displayData.parent} !</Text>
+                </View>
+              </Animated.View>
+
+              {/* Profile Button avec animation */}
+              <TouchableOpacity 
+                style={styles.profileButton}
+                onPress={() => setProfileModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Animated.View 
+                  style={[
+                    styles.profileButtonInner,
+                    {
+                      transform: [{
+                        scale: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.5, 1]
+                        })
+                      }]
+                    }
+                  ]}
+                >
+                  {familyMember?.avatarUrl ? (
+                    <Image source={{ uri: familyMember.avatarUrl }} style={styles.profileImage} />
+                  ) : (
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
+                      style={styles.profileGradient}
+                    >
+                      <Text style={styles.profileEmoji}>{familyMember?.avatar || '👤'}</Text>
+                    </LinearGradient>
+                  )}
+                  <View style={styles.onlineIndicator} />
+                </Animated.View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Family Stats Bar */}
+            <Animated.View 
+              style={[
+                styles.statsBar,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{stats.totalTribs || 0}</Text>
+                <Text style={styles.statLabel}>Tribs</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{stats.totalMembers || 0}</Text>
+                <Text style={styles.statLabel}>Membres</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{stats.tasks.todo || 0}</Text>
+                <Text style={styles.statLabel}>À faire</Text>
+              </View>
+            </Animated.View>
+          </SafeAreaView>
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Contenu principal avec animations */}
+      <Animated.ScrollView
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* CONTENU TEMPORAIRE EN ATTENDANT LES COMPOSANTS */}
+        
+        {/* Hero Card Tribs - Version simplifiée */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <LinearGradient
+            colors={[colors.primary, colors.secondary]}
+            style={[styles.tempHeroCard, { shadowColor: colors.primary }]}
+          >
+            <Text style={styles.tempHeroTitle}>🎯 Objectif Famille</Text>
+            <View style={styles.tempProgressContainer}>
+              <View style={styles.tempProgressBar}>
+                <LinearGradient
+                  colors={['#4CAF50', '#81C784']}
+                  style={[styles.tempProgressFill, { width: '65%' }]}
+                />
+              </View>
+              <Text style={styles.tempProgressText}>
+                {stats.totalTribs || 0} / 500 Tribs
+              </Text>
+            </View>
+            <Text style={styles.tempRewardText}>
+              🎢 Parc d'attractions dans {500 - (stats.totalTribs || 0)} Tribs !
+            </Text>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Priorités - Version simplifiée */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <Text style={[styles.tempSectionTitle, { color: colors.text }]}>
+            ⚡ Priorités du jour
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tempCarousel}>
+            {displayData.priorities.map((priority, index) => (
+              <View
+                key={priority.id}
+                style={[styles.tempPriorityCard, { 
+                  backgroundColor: colors.card,
+                  borderColor: priority.urgent ? '#FF6B6B' : colors.border
+                }]}
+              >
+                <Text style={styles.tempCardEmoji}>{priority.emoji}</Text>
+                <Text style={[styles.tempCardTitle, { color: colors.text }]}>
+                  {priority.title}
+                </Text>
+                <Text style={[styles.tempCardTime, { color: colors.textSecondary }]}>
+                  {priority.time}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Actions rapides - Version simplifiée */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <Text style={[styles.tempSectionTitle, { color: colors.text }]}>
+            ⚡ Actions rapides
+          </Text>
+          <View style={styles.tempGrid}>
+            {quickActions.map((action, index) => (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.tempGridItem}
+                onPress={() => {
+                  // Navigation temporaire
+                  console.log('Navigate to:', action.title);
+                }}
+              >
+                <LinearGradient
+                  colors={action.colors}
+                  style={styles.tempGridCard}
+                >
+                  <Text style={styles.tempGridEmoji}>{action.emoji}</Text>
+                  <Text style={styles.tempGridTitle}>{action.title}</Text>
+                  <Text style={styles.tempGridCount}>{action.count}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* Activité famille - Version simplifiée */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <Text style={[styles.tempSectionTitle, { color: colors.text }]}>
+            👥 Activité famille
+          </Text>
+          <View style={[styles.tempActivityCard, { backgroundColor: colors.card }]}>
+            <View style={styles.tempActivityItem}>
+              <Text style={styles.tempActivityEmoji}>✅</Text>
+              <Text style={[styles.tempActivityText, { color: colors.text }]}>
+                <Text style={{ fontWeight: '600' }}>Clémentine</Text> a terminé "Ranger sa chambre"
+              </Text>
+            </View>
+            <View style={styles.tempActivityItem}>
+              <Text style={styles.tempActivityEmoji}>🛒</Text>
+              <Text style={[styles.tempActivityText, { color: colors.text }]}>
+                <Text style={{ fontWeight: '600' }}>Ludwig</Text> a ajouté 3 articles
               </Text>
             </View>
           </View>
+        </Animated.View>
 
-          {/* Infos utilisateur */}
-          <Text style={modalStyles.userName}>{user?.name || 'Utilisateur'}</Text>
-          <Text style={modalStyles.userRole}>
-            {user?.role === 'admin' ? 'Administrateur' : 
-             user?.role === 'parent' ? 'Parent' : 'Enfant'}
-          </Text>
-          {user?.email && (
-            <Text style={modalStyles.userEmail}>{user.email}</Text>
-          )}
-          
-          {/* Famille */}
-          <View style={modalStyles.familyInfo}>
-            <Text style={modalStyles.familyLabel}>👨‍👩‍👧‍👦 Famille</Text>
-            <Text style={modalStyles.familyName}>{familyName}</Text>
-          </View>
+        <View style={styles.bottomSpacer} />
+      </Animated.ScrollView>
 
-          {/* Tribs */}
-          <LinearGradient
-            colors={['#FFD54F', colors.primary]}  // via thème pour la 2ème couleur (accent)
-            style={modalStyles.tribsCard}
+      {/* Floating Mood Indicator */}
+      <FloatingMoodIndicator mood={displayData.mood} />
+
+      {/* Profile Modal (garde l'existant mais avec style amélioré) */}
+      <Modal
+        visible={profileModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setProfileModalVisible(false)}
+      >
+        <BlurView intensity={80} style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1} 
+            onPress={() => setProfileModalVisible(false)}
           >
-            <Text style={modalStyles.tribsNumber}>{user?.tribs || 0}</Text>
-            <Text style={modalStyles.tribsLabel}>Tribs</Text>
-          </LinearGradient>
-
-          {/* Actions */}
-          <View style={modalStyles.actions}>
-            <TouchableOpacity 
-              style={modalStyles.actionButton}
-              onPress={() => {
-                onClose();
-                // TODO: Ouvrir modal d'édition de profil
-                console.log('🔧 Éditer profil - TODO');
-              }}
+            <Animated.View 
+              style={[
+                styles.modalContent,
+                { backgroundColor: colors.card }
+              ]}
             >
-              <Text style={modalStyles.actionButtonIcon}>✏️</Text>
-              <Text style={modalStyles.actionButtonText}>Éditer profil</Text>
-            </TouchableOpacity>
-
-            {isAuthenticated && (
-              <TouchableOpacity 
-                style={[modalStyles.actionButton, modalStyles.signOutButton]}
-                onPress={handleSignOut}
+              {/* Contenu du modal profil existant mais avec style amélioré */}
+              <View style={styles.modalHandle} />
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setProfileModalVisible(false)}
               >
-                <Text style={modalStyles.actionButtonIcon}>🚪</Text>
-                <Text style={modalStyles.signOutButtonText}>Se déconnecter</Text>
+                <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
-            )}
-          </View>
+              
+              {/* Avatar */}
+              <View style={styles.modalAvatarContainer}>
+                {familyMember?.avatarUrl ? (
+                  <Image source={{ uri: familyMember.avatarUrl }} style={styles.modalAvatar} />
+                ) : (
+                  <LinearGradient
+                    colors={[colors.primary, colors.secondary]}
+                    style={styles.modalAvatarGradient}
+                  >
+                    <Text style={styles.modalAvatarEmoji}>{familyMember?.avatar || '👤'}</Text>
+                  </LinearGradient>
+                )}
+              </View>
 
-          {/* Mode */}
-          <Text style={modalStyles.modeText}>
-            {isAuthenticated ? '🔐 Connecté' : '🧪 Mode test'}
-          </Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
+              <Text style={[styles.modalUserName, { color: colors.text }]}>
+                {familyMember?.name || 'Utilisateur'}
+              </Text>
+              <Text style={[styles.modalUserRole, { color: colors.textSecondary }]}>
+                {familyMember?.role === 'admin' ? '👑 Administrateur' : 
+                 familyMember?.role === 'parent' ? '👤 Parent' : '⭐ Enfant'}
+              </Text>
+
+              <TouchableOpacity 
+                style={[styles.signOutButton, { backgroundColor: colors.dangerBackground }]}
+                onPress={async () => {
+                  await signOut();
+                  setProfileModalVisible(false);
+                }}
+              >
+                <Text style={[styles.signOutText, { color: colors.dangerText }]}>
+                  Se déconnecter
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </TouchableOpacity>
+        </BlurView>
+      </Modal>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'System',
+  },
+
+  // Header styles
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+  },
+
+  headerGradient: {
+    paddingBottom: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
+  },
+
+  headerPattern: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
+  circle: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 999,
+  },
+
+  circle1: {
+    width: 200,
+    height: 200,
+    top: -100,
+    right: -50,
+  },
+
+  circle2: {
+    width: 150,
+    height: 150,
+    bottom: -75,
+    left: -75,
+  },
+
+  circle3: {
+    width: 100,
+    height: 100,
+    top: 50,
+    left: 50,
+  },
+
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 10 : 30,
+  },
+
+  greetingSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  timeEmoji: {
+    fontSize: 32,
+  },
+
+  greetingText: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+
+  userName: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  profileButton: {
+    padding: 4,
+  },
+
+  profileButtonInner: {
+    position: 'relative',
+  },
+
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+
+  profileGradient: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+
+  profileEmoji: {
+    fontSize: 24,
+  },
+
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    backgroundColor: '#4CAF50',
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+
+  // Stats bar
+  statsBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  statValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: 'white',
+  },
+
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+
+  // ScrollView
+  scrollView: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingTop: SCREEN_HEIGHT < 700 ? 220 : 260,
+    paddingHorizontal: 20,
+  },
+
+  bottomSpacer: {
+    height: 100,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+
+  modalContent: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    marginBottom: 20,
+  },
+
+  modalCloseButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalCloseText: {
+    fontSize: 18,
+    color: '#666',
+  },
+
+  modalAvatarContainer: {
+    marginBottom: 20,
+  },
+
+  modalAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+
+  modalAvatarGradient: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalAvatarEmoji: {
+    fontSize: 48,
+  },
+
+  modalUserName: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+
+  modalUserRole: {
+    fontSize: 16,
+    marginBottom: 30,
+  },
+
+  signOutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+  },
+
+  signOutText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // STYLES TEMPORAIRES pour les composants inline
+  tempHeroCard: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+
+  tempHeroTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 16,
+  },
+
+  tempProgressContainer: {
+    marginBottom: 16,
+  },
+
+  tempProgressBar: {
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+
+  tempProgressFill: {
+    height: '100%',
+    borderRadius: 6,
+  },
+
+  tempProgressText: {
+    fontSize: 14,
+    color: 'white',
+    textAlign: 'right',
+  },
+
+  tempRewardText: {
+    fontSize: 16,
+    color: 'white',
+    textAlign: 'center',
+  },
+
+  tempSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+
+  tempCarousel: {
+    marginHorizontal: -20,
+    marginBottom: 24,
+  },
+
+  tempPriorityCard: {
+    width: 250,
+    padding: 16,
+    marginLeft: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  tempCardEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+
+  tempCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+
+  tempCardTime: {
+    fontSize: 14,
+  },
+
+  tempGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+
+  tempGridItem: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+
+  tempGridCard: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+
+  tempGridEmoji: {
+    fontSize: 32,
+    color: 'white',
+  },
+
+  tempGridTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+
+  tempGridCount: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+
+  tempActivityCard: {
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  tempActivityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  tempActivityEmoji: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+
+  tempActivityText: {
+    fontSize: 14,
+    flex: 1,
+  },
+});

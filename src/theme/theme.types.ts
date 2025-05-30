@@ -6,6 +6,15 @@ export interface ThemeColors {
   text: string;
   accent?: string;
 
+  // src/theme/theme.types.ts
+  // Ajouter dans ThemeColors :
+  system?: {
+    success?: string;
+    warning?: string;
+    error?: string;
+    info?: string;
+  }
+
   // 👇 Ajouts recommandés 👇
   border: string;
   textSecondary: string;
