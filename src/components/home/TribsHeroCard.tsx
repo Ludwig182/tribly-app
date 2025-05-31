@@ -92,38 +92,6 @@ export default function TribsHeroCard({ familyGoal, children }: Props) {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>
-            {themeName === 'child' ? '🏆 Super Tribs !' : '🎯 Objectif Famille'}
-          </Text>
-          <View style={styles.goalBadge}>
-            <Text style={styles.goalText}>
-              {familyGoal.current}/{familyGoal.target}
-            </Text>
-          </View>
-        </View>
-
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <Animated.View style={[styles.progressFill, { width: widthInterpolate }]}>
-              <LinearGradient
-                colors={['#4CAF50', '#81C784']}
-                style={styles.progressGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              />
-            </Animated.View>
-            {themeName === 'child' && progress > 10 && (
-              <Animated.View 
-                style={[
-                  styles.progressIcon,
-                  { left: widthInterpolate }
-                ]}
-              >
-                <Text style={styles.progressEmoji}>🚀</Text>
-              </Animated.View>
-            )}
-          </View>
           <Text style={styles.progressText}>{Math.round(progress)}%</Text>
         </View>
 
