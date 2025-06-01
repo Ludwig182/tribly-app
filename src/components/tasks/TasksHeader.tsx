@@ -1,8 +1,9 @@
-// src/components/tasks/TasksHeader.tsx - Version thématique
-import { LinearGradient } from 'expo-linear-gradient';
+// src/components/tasks/TasksHeader.tsx - VERSION CORRECTE QUE VOUS AVEZ FOURNIE
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { useTheme } from '../../theme/useTheme';
+// CET IMPORT EST CRUCIAL ET CORRECT ICI :
+import { View, Text, StyleSheet, Platform, StatusBar, SafeAreaView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface Props {
   familyName?: string;
@@ -11,52 +12,65 @@ interface Props {
   isDemo: boolean;
 }
 
-export default function TasksHeader({ 
-  familyName = 'Famille', 
-  urgentCount, 
-  todoCount, 
-  isDemo 
+export default function TasksHeader({
+  familyName = 'Famille',
+  urgentCount,
+  todoCount,
+  isDemo
 }: Props) {
   const { colors } = useTheme();
 
   return (
-    <LinearGradient 
-      colors={[colors.primary, colors.secondary]} 
-      style={styles.header}
+    <LinearGradient
+      colors={[colors.primary, colors.secondary]} // Utilise les couleurs du thème
+      style={styles.headerGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <Text style={styles.title}>✅ Tâches & Tribs</Text>
-      <Text style={styles.subtitle}>
-        {familyName} • {urgentCount} urgent(es) • {todoCount} total
-      </Text>
-      {isDemo && (
-        <Text style={styles.demo}>
-          Mode démo – connectez-vous pour synchroniser
-        </Text>
-      )}
+      <View style={styles.headerPattern}>
+        <View style={[styles.circle, styles.circle1]} />
+        <View style={[styles.circle, styles.circle2]} />
+        <View style={[styles.circle, styles.circle3]} />
+      </View>
+
+      <SafeAreaView style={styles.headerSafeAreaInternal}>
+        <View style={styles.headerActualContent}>
+          <Text style={[styles.title, { color: colors.onPrimary || 'white' }]}>✅ Tâches & Tribs</Text>
+          <Text style={[styles.subtitle, { color: (colors.onPrimary ? colors.onPrimary + 'e6' : 'rgba(255,255,255,0.95)') }]}>
+            {familyName} • {urgentCount} urgent(es) • {todoCount} total
+          </Text>
+          {isDemo && (
+            <Text style={[styles.demo, { color: (colors.onPrimary ? colors.onPrimary + 'b3' : 'rgba(255,255,255,0.8)') }]}>
+              Mode démo – connectez-vous pour synchroniser
+            </Text>
+          )}
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { 
-    padding: 20, 
-    borderBottomLeftRadius: 24, 
-    borderBottomRightRadius: 24 
+  headerGradient: {
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // Utilisation de Platform
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    overflow: 'hidden',
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: '600', 
-    color: '#fff' 
+  headerPattern: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.2,
   },
-  subtitle: { 
-    fontSize: 14, 
-    color: 'rgba(255,255,255,0.95)', 
-    marginTop: 4 
+  circle: {
+    position: 'absolute', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999,
   },
-  demo: { 
-    fontSize: 12, 
-    fontStyle: 'italic', 
-    color: 'rgba(255,255,255,0.8)', 
-    marginTop: 2 
-  }
+  circle1: { width: 100, height: 100, top: -30, left: -20 },
+  circle2: { width: 70, height: 70, bottom: -15, right: -15 },
+  circle3: { width: 50, height: 50, top: 5, right: 30, opacity: 0.15 },
+  headerSafeAreaInternal: {},
+  headerActualContent: { alignItems: 'center', },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 3, },
+  subtitle: { fontSize: 13, textAlign: 'center', marginBottom: Platform.OS === 'ios' ? 2 : 0, }, // Utilisation de Platform
+  demo: { fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginTop: 2, }
 });

@@ -1,8 +1,9 @@
-// src/components/family/FamilyScreen.tsx - Version corrigée pour header "full screen"
+// src/components/family/FamilyScreen.tsx - Version avec couleurs du thème pour le header
 import React, { useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StyleSheet, Platform, StatusBar } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, StyleSheet, Platform, StatusBar, ActivityIndicator } from 'react-native'; // Ajout de ActivityIndicator
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFamily } from '../../hooks/useFamily';
+import { useTheme } from '../../theme/ThemeProvider'; // ÉTAPE 1: Importer useTheme
 import FamilyStats from './FamilyStats';
 import FamilyMemberCard from './FamilyMemberCard';
 import FamilySettings from './FamilySettings';
@@ -14,16 +15,16 @@ const FamilyScreen = () => {
     currentMember,
     loading
   } = useFamily();
+  const { colors } = useTheme(); // ÉTAPE 2: Utiliser useTheme pour obtenir les couleurs
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
   if (loading && !familyData) {
     return (
-      // Garder SafeAreaView ici pour l'écran de chargement est OK,
-      // ou un View avec un fond et un ActivityIndicator centré.
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text>Chargement de la famille...</Text>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.textSecondary, marginTop: 10 }}>Chargement de la famille...</Text>
       </SafeAreaView>
     );
   }
@@ -49,18 +50,14 @@ const FamilyScreen = () => {
   };
 
   return (
-    // ÉTAPE 1: Remplacer la SafeAreaView globale par un View simple.
-    // La gestion de la safe area pour le contenu se fera plus bas.
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
-      {/* Le View headerContainer n'est pas strictement nécessaire si le header est dans le flux
-          et ne nécessite pas de styles supplémentaires comme une ombre globale. */}
       <LinearGradient
-        colors={['#7986CB', '#FF8A80']}
-        style={styles.headerGradient} // Applique le paddingTop pour la status bar Android et les arrondis
-        start={{ x: 0, y: 0 }}
+        // ÉTAPE 3: Utiliser les couleurs du thème pour le dégradé
+        colors={[colors.primary, colors.secondary]} // Assurez-vous que c'est l'ordre désiré
+        style={styles.headerGradient}
+        start={{ x: 0, y: 0 }} // ou les valeurs de start/end de HomeScreen si différentes
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerPattern}>
@@ -69,33 +66,28 @@ const FamilyScreen = () => {
           <View style={[styles.circle, styles.circle3]} />
         </View>
 
-        {/* ÉTAPE 2: SafeAreaView INTERNE pour le contenu du header */}
-        {/* Cette SafeAreaView s'assure que le contenu est visible sous la barre d'état/encoche sur iOS. */}
-        {/* Sur Android, avec paddingTop:StatusBar.currentHeight sur headerGradient, elle n'ajoutera pas de padding en haut. */}
         <SafeAreaView style={styles.headerSafeAreaInternal}>
           <View style={styles.headerActualContent}>
             <View style={styles.familyIcon}>
               <Text style={styles.familyIconText}>👥</Text>
             </View>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.familyName} numberOfLines={1} ellipsizeMode="tail">
+              <Text style={[styles.familyName, { color: colors.onPrimary || 'white' }]}>
                 Famille {familyData?.familyName || familyData?.name || 'Questroy'}
               </Text>
-              <Text style={styles.membersCount}>
+              <Text style={[styles.membersCount, { color: (colors.onPrimary ? colors.onPrimary + 'e6' : 'rgba(255,255,255,0.9)') }]}> {/* Ajout d'opacité */}
                 {onlineMembers}/{familyMembers.length} membres connectés
               </Text>
             </View>
           </View>
         </SafeAreaView>
       </LinearGradient>
-      {/* Fin du Header */}
 
       <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
-        {/* Le contenu de la ScrollView commencera naturellement après le header.
-            Pas besoin de paddingTop spécial ici si le header n'est pas en position: 'absolute'. */}
         <FamilyStats stats={calculatedStats} />
         <View style={styles.membersSection}>
-          <Text style={styles.sectionTitle}>Membres de la famille</Text>
+          {/* Appliquer la couleur du thème au titre de section */}
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Membres de la famille</Text>
           {familyMembers.map((member) => (
             <FamilyMemberCard
               key={member.id}
@@ -110,8 +102,8 @@ const FamilyScreen = () => {
             />
           ))}
         </View>
+        {/* FamilySettings pourrait aussi utiliser les couleurs du thème en interne */}
         <FamilySettings />
-        {/* Ajout d'un espace en bas pour que le dernier élément ne soit pas collé au bord si pas de TabBar */}
         <View style={{ height: 30 }} />
       </ScrollView>
 
@@ -133,13 +125,9 @@ const FamilyScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    // backgroundColor: '#f8f9fa', // Géré par le thème via style inline
   },
-  // headerContainer n'est plus nécessaire si LinearGradient est l'élément direct du header.
-  // Si vous le gardez, il ne doit pas avoir de style qui interfère.
-  // headerContainer: {},
   headerGradient: {
-    // ÉTAPE 3: Ajuster le paddingTop pour que le fond aille jusqu'en haut sur iOS
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -156,34 +144,36 @@ const styles = StyleSheet.create({
   circle1: { width: 120, height: 120, top: -40, left: -30 },
   circle2: { width: 80, height: 80, bottom: -20, right: -20 },
   circle3: { width: 60, height: 60, top: 10, right: 40, opacity: 0.2 },
-
   headerSafeAreaInternal: {
-    // Ce style est appliqué à la SafeAreaView interne.
-    // Par défaut, elle appliquera les paddings nécessaires.
-    // On peut lui donner flex: 0 pour qu'elle ne prenne que la hauteur de son contenu si besoin,
-    // mais généralement ce n'est pas nécessaire pour cet usage.
+    // Aucun style spécifique nécessaire ici en général
   },
   headerActualContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    // Le paddingTop est maintenant géré par la SafeAreaView interne sur iOS,
-    // et par le paddingTop du headerGradient sur Android.
   },
   familyIcon: {
     width: 50, height: 50, borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Pourrait être dynamisé avec le thème si désiré
     justifyContent: 'center', alignItems: 'center', marginRight: 15,
   },
-  familyIconText: { fontSize: 20, },
+  familyIconText: { fontSize: 20, }, // La couleur du texte ici sera par défaut (noir/blanc selon le thème global)
+                                     // Si vous voulez forcer blanc, ajoutez color: 'white'
   headerTextContainer: { flex: 1, },
   familyName: {
-    fontSize: 22, fontWeight: 'bold', color: 'white', marginBottom: 2,
+    fontSize: 22, fontWeight: 'bold',
+    // color: 'white', // Géré par le thème via style inline
+    marginBottom: 2,
   },
-  membersCount: { fontSize: 14, color: 'rgba(255, 255, 255, 0.9)', },
+  membersCount: {
+    fontSize: 14,
+    // color: 'rgba(255, 255, 255, 0.9)', // Géré par le thème via style inline
+  },
   contentScroll: { flex: 1, },
   membersSection: { marginTop: 20, paddingHorizontal: 20, },
   sectionTitle: {
-    fontSize: 18, fontWeight: '600', color: '#37474F', marginBottom: 15,
+    fontSize: 18, fontWeight: '600',
+    // color: '#37474F', // Géré par le thème via style inline
+    marginBottom: 15,
   },
 });
 
