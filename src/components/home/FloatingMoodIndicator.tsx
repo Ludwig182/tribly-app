@@ -154,11 +154,8 @@ export default function FloatingMoodIndicator({ mood }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    right: 20,
-    zIndex: 1000,
+    marginVertical: 20,
+    marginHorizontal: 0,
   },
 
   indicator: {
