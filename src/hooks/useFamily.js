@@ -47,6 +47,17 @@ export const FamilyProvider = ({ children }) => {
     }
   }, [isAuthenticated, familyMember]);
 
+  // 🔄 Effet pour synchroniser currentMember avec familyData
+  useEffect(() => {
+    if (familyData && familyData.members && currentMember) {
+      const updatedMember = familyData.members.find(m => m.id === currentMember.id);
+      if (updatedMember && JSON.stringify(updatedMember) !== JSON.stringify(currentMember)) {
+        console.log('🔄 Synchronisation du membre actuel avec les données famille:', updatedMember.name);
+        setCurrentMember(updatedMember);
+      }
+    }
+  }, [familyData, currentMember]);
+
   // 🔄 Effet principal pour les données Firebase
   useEffect(() => {
     if (!familyId) {
@@ -204,6 +215,15 @@ export const FamilyProvider = ({ children }) => {
         if (familyId) {
           const freshFamily = await familyService.getFamily(familyId);
           setFamilyData(freshFamily);
+          
+          // Mettre à jour currentMember avec les données fraîches
+          if (freshFamily && freshFamily.members) {
+            const updatedMember = freshFamily.members.find(m => m.id === currentMember?.id);
+            if (updatedMember) {
+              console.log('✅ Mise à jour du membre actuel:', updatedMember.name);
+              setCurrentMember(updatedMember);
+            }
+          }
         }
         
       } catch (error) {

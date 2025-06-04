@@ -1,124 +1,117 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet } from 'react-native';
+import CalendarScreen from '../../src/components/calendar/CalendarScreen';
+import { CalendarProvider } from '../../src/hooks/useCalendar';
 
-export default function CalendarScreen() {
+export default function CalendarTab() {
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={['#7986CB', '#FF8A80']}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Text style={styles.headerTitle}>📅 Calendrier Famille</Text>
-        <Text style={styles.headerSubtitle}>Famille Questroy</Text>
-      </LinearGradient>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.comingSoonCard}>
-          <Text style={styles.comingSoonIcon}>🚧</Text>
-          <Text style={styles.comingSoonTitle}>Calendrier en développement</Text>
-          <Text style={styles.comingSoonText}>
-            Bientôt : calendrier partagé avec événements famille, rendez-vous, et synchronisation !
-          </Text>
-          
-          <View style={styles.previewFeatures}>
-            <Text style={styles.featureTitle}>Fonctionnalités prévues :</Text>
-            <Text style={styles.featureItem}>📋 Événements partagés</Text>
-            <Text style={styles.featureItem}>🔔 Rappels intelligents</Text>
-            <Text style={styles.featureItem}>👥 Vue par membre famille</Text>
-            <Text style={styles.featureItem}>🎯 Objectifs hebdomadaires</Text>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <CalendarProvider>
+      <CalendarScreen />
+    </CalendarProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f5f5',
   },
-  
   header: {
+    paddingVertical: 20,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 25,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    alignItems: 'center',
   },
-  
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: 'white',
     marginBottom: 5,
   },
-  
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'white',
     opacity: 0.9,
   },
-  
-  content: {
+  container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  eventsSection: {
     padding: 20,
   },
-  
-  comingSoonCard: {
+  eventsSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2d4150',
+    marginBottom: 15,
+  },
+  eventItem: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: 'row',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginTop: 50,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  
-  comingSoonIcon: {
-    fontSize: 48,
-    marginBottom: 20,
+  eventTime: {
+    backgroundColor: '#7986CB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  
-  comingSoonTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  
-  comingSoonText: {
-    fontSize: 16,
-    color: '#4a5568',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 30,
-  },
-  
-  previewFeatures: {
-    width: '100%',
-  },
-  
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  
-  featureItem: {
+  eventTimeText: {
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 14,
-    color: '#4a5568',
-    marginBottom: 8,
+  },
+  eventContent: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2d4150',
+    marginBottom: 4,
+  },
+  eventDescription: {
+    fontSize: 14,
+    color: '#718096',
+  },
+  noEvents: {
+    alignItems: 'center',
+    padding: 30,
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#a0aec0',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  addEventButton: {
+    backgroundColor: '#7986CB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  addEventButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  selectDatePrompt: {
+    alignItems: 'center',
+    padding: 30,
+  },
+  selectDateText: {
+    fontSize: 16,
+    color: '#a0aec0',
     textAlign: 'center',
   },
 });

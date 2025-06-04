@@ -12,10 +12,13 @@ import {
   Dimensions,
   Platform,
   StatusBar,
-  ActivityIndicator // Ajout pour un meilleur indicateur de chargement
+  ActivityIndicator, // Ajout pour un meilleur indicateur de chargement
+  RefreshControl // Ajout pour le pull-to-refresh
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+
 // import { BlurView } from 'expo-blur'; // Retiré car non utilisé pour l'instant
 
 // Import des composants
@@ -24,6 +27,7 @@ import PrioritiesCarousel from './PrioritiesCarousel';
 import QuickActionsGrid from './QuickActionsGrid';
 import FamilyActivityFeed from './FamilyActivityFeed';
 import MoodIndicatorContextual from './MoodIndicatorContextual';
+import EditProfileModal from '../family/EditProfileModal'; // Import du composant EditProfileModal
 
 // Import des hooks
 import { useAuth } from '../../hooks/useAuth';
@@ -34,6 +38,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function HomeScreen() {
   const { colors, fontSizeBase, fontFamily } = useTheme(); // Ligne 42 originale
   const { userName, familyMember, userRole, isAuthenticated, signOut } = useAuth();
+  const { user } = useAuth();
   // Extraction des données de useFamily
   const {
     familyData,
@@ -42,7 +47,8 @@ export default function HomeScreen() {
     familyName,
     loading: familyHookIsLoading, // Renommé pour clarté
     tasks,
-    shoppingItems
+    shoppingItems,
+    refresh // Extraire la fonction refresh directement
   } = useFamily();
 
   // DEBUG: Log initial des props des hooks (peut être réduit ou supprimé en production)
@@ -61,6 +67,8 @@ export default function HomeScreen() {
 
   // États UI
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false); // Nouvel état pour la modal d'édition
+  const [selectedMember, setSelectedMember] = useState(null); // État pour stocker le membre à éditer
   const scrollY = useRef(new Animated.Value(0)).current;
   const [greeting, setGreeting] = useState('');
   const [timeEmoji, setTimeEmoji] = useState('');
@@ -72,6 +80,41 @@ export default function HomeScreen() {
 
   // État pour gérer le chargement complet des données
   const [allDataReady, setAllDataReady] = useState(false);
+
+  // État pour le pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fonction pour gérer le pull-to-refresh
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+      console.log('✅ Données rafraîchies via pull-to-refresh');
+    } catch (error) {
+      console.error('❌ Erreur lors du rafraîchissement:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
+
+  // Fonction pour ouvrir la modal d'édition de profil
+  const openEditProfileModal = (member) => {
+    setSelectedMember(member);
+    setEditProfileModalVisible(true);
+  };
+
+  // Fonction pour fermer la modal d'édition de profil
+  const closeEditProfileModal = () => {
+    setEditProfileModalVisible(false);
+  };
+
+  // Fonction appelée après une mise à jour réussie du profil
+  const handleProfileUpdated = async () => {
+    console.log('✅ Profil mis à jour avec succès (HomeScreen)');
+    // Rafraîchir les données de la famille pour mettre à jour le header
+    await refresh();
+    closeEditProfileModal();
+  };
 
   // Effet pour démarrer les animations d'entrée du header et le greeting
   useEffect(() => {
@@ -158,10 +201,38 @@ export default function HomeScreen() {
     { id: 'demo2', time: '18:00', title: 'Préparer dîner (Démo)', emoji: '🍽️', urgent: false },
   ]);
   const quickActions = [
-    { id: '1', title: 'Calendrier', count: `${stats?.calendar?.upcoming || 0}`, emoji: '📅', colors: [colors.primary, colors.secondary] },
-    { id: '2', title: 'Tâches', count: `${stats?.tasks?.todo || 0}`, emoji: '✅', colors: ['#48bb78', '#38a169'] },
-    { id: '3', title: 'Courses', count: `${stats?.shopping?.toBuy || 0}`, emoji: '🛒', colors: ['#FFCC80', '#A29BFE'] },
-    { id: '4', title: 'Famille', count: `${stats?.totalMembers || 0}`, emoji: '👨‍👩‍👧‍👦', colors: [colors.secondary, colors.primary] }
+    {
+      id: '1',
+      title: 'Calendrier',
+      count: `${stats?.calendar?.upcoming || 0}`,
+      emoji: '📅',
+      colors: [colors.primary, colors.secondary], // Utilise les couleurs du thème
+      screenTarget: 'CalendarScreen', // REMPLACEZ PAR LE NOM RÉEL DE VOTRE ÉCRAN CALENDRIER
+    },
+    {
+      id: '2',
+      title: 'Tâches',
+      count: `${stats?.tasks?.todo || 0}`,
+      emoji: '✅',
+      colors: ['#48bb78', '#38a169'],
+      screenTarget: 'TasksScreen', // REMPLACEZ PAR LE NOM RÉEL DE VOTRE ÉCRAN TÂCHES
+    },
+    {
+      id: '3',
+      title: 'Courses',
+      count: `${stats?.shopping?.toBuy || 0}`,
+      emoji: '🛒',
+      colors: ['#FFCC80', '#A29BFE'], // Ces couleurs sont spécifiques au design
+      screenTarget: 'ShoppingScreen', // REMPLACEZ PAR LE NOM RÉEL DE VOTRE ÉCRAN COURSES
+    },
+    {
+      id: '4',
+      title: 'Famille',
+      count: `${stats?.totalMembers || 0}`,
+      emoji: '👨‍👩‍👧‍👦',
+      colors: [colors.secondary, colors.primary], // Utilise les couleurs du thème
+      screenTarget: 'FamilyScreen', // REMPLACEZ PAR LE NOM RÉEL DE VOTRE ÉCRAN FAMILLE
+    },
   ];
   const displayMembers = familyMembers.length > 0 ? familyMembers : [
     // Fallback si aucune donnée membre, ou supprimer pour n'afficher que les vrais
@@ -204,11 +275,11 @@ export default function HomeScreen() {
           </View>
           <SafeAreaView>
             <View style={styles.headerContent}>
-              <Animated.View style={[styles.greetingSection, { opacity: opacityAnimForHeaderElements, transform: [{ translateY: slideAnim }] }]}>
+              <Animated.View style={[styles.greetingSection, { opacity: opacityAnimForHeaderElements, transform: [{ translateY: slideAnim }] }]}>                
                 <Text style={styles.timeEmoji}>{timeEmoji}</Text>
                 <View>
                   <Text style={styles.greetingText}>{greeting},</Text>
-                  <Text style={styles.userName}>{userName || 'Utilisateur'} !</Text>
+                  <Text style={styles.userName}>{currentMember?.name || 'Utilisateur'} !</Text>
                 </View>
               </Animated.View>
               <TouchableOpacity style={styles.profileButton} onPress={() => setProfileModalVisible(true)} activeOpacity={0.8}>
@@ -224,7 +295,7 @@ export default function HomeScreen() {
                 </Animated.View>
               </TouchableOpacity>
             </View>
-            <Animated.View style={[styles.statsBar, { opacity: opacityAnimForHeaderElements, transform: [{ translateY: slideAnim }] }]}>
+            <Animated.View style={[styles.statsBar, { opacity: opacityAnimForHeaderElements, transform: [{ translateY: slideAnim }] }]}>              
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{stats?.totalTribs || 0}</Text>
                 <Text style={styles.statLabel}>Tribs</Text>
@@ -250,6 +321,15 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary, colors.secondary]}
+            progressBackgroundColor={colors.background}
+          />
+        }
       >
         <MoodIndicatorContextual
           mood={mood}
@@ -264,14 +344,28 @@ export default function HomeScreen() {
       </Animated.ScrollView>
 
       {/* ProfileModal (décommenter si besoin) */}
-      {profileModalVisible && ( // Condition pour rendre le modal uniquement si visible
+      {profileModalVisible && (
         <ProfileModal
           visible={profileModalVisible}
           onClose={() => setProfileModalVisible(false)}
-          user={familyMember} // ou currentMember selon ce que vous voulez afficher/modifier
+          user={familyMember}
           isAuthenticated={isAuthenticated}
           onSignOut={signOut}
           familyName={familyName || familyData?.familyName || ''}
+          onEditProfile={openEditProfileModal} // Ajout de la prop onEditProfile
+        />
+      )}
+
+      {/* EditProfileModal */}
+      {editProfileModalVisible && selectedMember && (
+        <EditProfileModal
+          visible={editProfileModalVisible}
+          member={selectedMember}
+          familyId={familyData?.id || 'famille-questroy-test'}
+          currentUserId={currentMember?.id || 'user-001'}
+          familyData={familyData}
+          onClose={closeEditProfileModal}
+          onSuccess={handleProfileUpdated}
         />
       )}
     </View>
@@ -394,14 +488,31 @@ const styles = StyleSheet.create({
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
-  user: any;
+  user: any; // Idéalement, définir un type User plus précis
   isAuthenticated: boolean;
   onSignOut: () => Promise<void>;
   familyName: string;
+  onEditProfile: (user: any) => void; // Ajout de la prop pour éditer le profil
 }
 
-function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, familyName }: ProfileModalProps) {
-  const { colors, fontSizeBase, fontFamily } = useTheme(); // Peut utiliser useTheme ici
+function ProfileModal({ 
+  visible, 
+  onClose, 
+  user, 
+  isAuthenticated, 
+  onSignOut, 
+  familyName,
+  onEditProfile
+}: ProfileModalProps) {
+  const { colors, fontSizeBase } = useTheme();
+  const navigation = useNavigation<NavigationProp<any>>();
+
+  // Modification de la fonction handleEditProfile pour utiliser la prop
+  const handleEditProfile = () => {
+    onClose();
+    // Utilisation de la prop onEditProfile au lieu d'appeler directement openEditProfileModal
+    onEditProfile(user);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -514,7 +625,10 @@ function ProfileModal({ visible, onClose, user, isAuthenticated, onSignOut, fami
             <Text style={modalStyles.tribsLabel}>Tribs</Text>
           </LinearGradient>
           <View style={modalStyles.actions}>
-            <TouchableOpacity style={modalStyles.actionButton} onPress={() => { onClose(); console.log('🔧 Éditer profil - TODO'); }}>
+            <TouchableOpacity 
+              style={modalStyles.actionButton} 
+              onPress={handleEditProfile}
+            >
               <Text style={modalStyles.actionButtonIcon}>✏️</Text>
               <Text style={modalStyles.actionButtonText}>Éditer profil</Text>
             </TouchableOpacity>

@@ -1,20 +1,29 @@
 // src/components/home/PrioritiesCarousel.tsx
-import React, { useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity,
+
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
   Animated,
-  Dimensions 
+  Dimensions,
+  Alert,
+  TouchableOpacity, // Gardé pour le bouton "Tout voir" et le fallback
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/theme/ThemeProvider';
+import {
+  TapGestureHandler,
+  LongPressGestureHandler,
+  State,
+  ScrollView as GestureScrollView, // Utiliser le ScrollView de RNGH si besoin de compatibilité
+} from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.7;
-const CARD_SPACING = 16;
+const CARD_WIDTH = SCREEN_WIDTH * 0.75;
+const CARD_SPACING = 12;
+const EDGE_PADDING = (SCREEN_WIDTH - CARD_WIDTH) / 2;
 
 interface Priority {
   id: string;
@@ -22,29 +31,122 @@ interface Priority {
   title: string;
   emoji: string;
   urgent: boolean;
+  completed?: boolean;
+  category?: 'task' | 'event' | 'reminder';
+  actionText?: string; // Texte pour le bouton d'action sur la carte
 }
 
 interface Props {
   priorities: Priority[];
+  onUpdatePriority?: (priorityId: string, updates: Partial<Priority>) => void;
+  onViewAllPress?: () => void; // Pour le bouton "Tout voir"
+  onCardActionPress?: (priority: Priority) => void; // Pour l'action principale de la carte
 }
 
-export default function PrioritiesCarousel({ priorities }: Props) {
-  const { colors, name: themeName } = useTheme();
+export default function PrioritiesCarousel({
+  priorities: initialPriorities,
+  onUpdatePriority,
+  onViewAllPress,
+  onCardActionPress,
+}: Props) {
+  const { colors, name: themeName, fontSizeBase } = useTheme();
   const scrollX = useRef(new Animated.Value(0)).current;
+  const [priorities, setPriorities] = useState(initialPriorities);
 
-  if (!priorities || priorities.length === 0) return null;
+  // Animation pour le thème enfant "bouncy"
+  const childBounceAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    setPriorities(initialPriorities);
+  }, [initialPriorities]);
+
+  const handleDoubleTap = useCallback((priorityId: string) => {
+    const updatedPriority = priorities.find(p => p.id === priorityId);
+    if (updatedPriority) {
+      const newCompletedState = !updatedPriority.completed;
+      setPriorities(prev => prev.map(p => (p.id === priorityId ? { ...p, completed: newCompletedState } : p)));
+      onUpdatePriority?.(priorityId, { completed: newCompletedState });
+      Haptics.notificationAsync(
+        newCompletedState ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning
+      );
+      Alert.alert("Priorité mise à jour", `${updatedPriority.title} marquée comme ${newCompletedState ? 'faite' : 'à faire'}.`);
+
+      if (themeName === 'child' && newCompletedState) {
+        Animated.sequence([
+          Animated.spring(childBounceAnim, { toValue: 1.1, useNativeDriver: true }),
+          Animated.spring(childBounceAnim, { toValue: 1, useNativeDriver: true }),
+        ]).start();
+      }
+    }
+  }, [priorities, onUpdatePriority, themeName, childBounceAnim]);
+
+  const handleLongPress = useCallback((priority: Priority) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    let actions = [];
+    if (priority.category === 'task') {
+      actions = [
+        { text: 'Reporter la tâche', onPress: () => console.log('Reporter Tâche:', priority.id) },
+        { text: 'Déléguer la tâche', onPress: () => console.log('Déléguer Tâche:', priority.id) },
+      ];
+    } else if (priority.category === 'event') {
+      actions = [
+        { text: 'Modifier l\'événement', onPress: () => console.log('Modifier Événement:', priority.id) },
+        { text: 'Inviter quelqu\'un', onPress: () => console.log('Inviter pour:', priority.id) },
+      ];
+    } else {
+      actions = [{ text: 'Modifier', onPress: () => console.log('Modifier Priorité:', priority.id) }];
+    }
+
+    Alert.alert(
+      priority.title,
+      'Actions rapides :',
+      [...actions, { text: 'Annuler', style: 'cancel' }],
+      { cancelable: true }
+    );
+  }, []);
+
+  const getCardButtonText = (priority: Priority): string => {
+    if (priority.actionText) return priority.actionText;
+    if (priority.category === 'task') return 'Détails'; // [cite: 4]
+    if (priority.category === 'event') return 'Planifier'; // [cite: 4]
+    return 'Ouvrir';
+  };
+
+
+  if (!priorities || priorities.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fontSizeBase * 1.15 }]}>
+            {themeName === 'child' ? '🎯 Mes missions !' : '⚡ Priorités du jour'}
+          </Text>
+        </View>
+        <View style={[styles.emptyStateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.emptyStateEmoji, { fontSize: fontSizeBase * 2.5 }]}>🎉</Text>
+          <Text style={[styles.emptyStateText, { color: colors.text, fontSize: fontSizeBase * 1.05 }]}>
+            Aucune priorité pour aujourd'hui !
+          </Text>
+          <Text style={[styles.emptyStateSubText, { color: colors.textSecondary, fontSize: fontSizeBase * 0.9 }]}>
+            Profitez de votre journée ou ajoutez de nouvelles tâches.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fontSizeBase * 1.15 }]}>
           {themeName === 'child' ? '🎯 Mes missions !' : '⚡ Priorités du jour'}
         </Text>
-        <TouchableOpacity style={styles.viewAllButton}>
-          <Text style={[styles.viewAllText, { color: colors.primary }]}>
-            Tout voir
-          </Text>
-        </TouchableOpacity>
+        {onViewAllPress && (
+          <TouchableOpacity style={styles.viewAllButton} onPress={onViewAllPress}>
+            <Text style={[styles.viewAllText, { color: colors.primary, fontSize: fontSizeBase * 0.9 }]}>
+              Tout voir
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <Animated.ScrollView
@@ -52,12 +154,15 @@ export default function PrioritiesCarousel({ priorities }: Props) {
         showsHorizontalScrollIndicator={false}
         snapToInterval={CARD_WIDTH + CARD_SPACING}
         decelerationRate="fast"
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: EDGE_PADDING }]}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
+          { useNativeDriver: true } // native driver pour le scroll
         )}
         scrollEventThrottle={16}
+        // Pour le thème enfant, on peut ajouter une sur-extension
+        overScrollMode={themeName === 'child' ? 'auto' : 'never'} // 'auto' permet le rebond natif sur Android
+        bounces={themeName === 'child'} // Permet le rebond sur iOS
       >
         {priorities.map((priority, index) => {
           const inputRange = [
@@ -66,95 +171,122 @@ export default function PrioritiesCarousel({ priorities }: Props) {
             (index + 1) * (CARD_WIDTH + CARD_SPACING),
           ];
 
-          const scale = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.9, 1, 0.9],
-            extrapolate: 'clamp',
-          });
-
-          const opacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.6, 1, 0.6],
-            extrapolate: 'clamp',
-          });
+          const scale = scrollX.interpolate({ inputRange, outputRange: [0.92, 1, 0.92], extrapolate: 'clamp' }); // [cite: 4]
+          const opacity = scrollX.interpolate({ inputRange, outputRange: [0.75, 1, 0.75], extrapolate: 'clamp' }); // [cite: 4]
 
           return (
-            <Animated.View
+            <LongPressGestureHandler
               key={priority.id}
-              style={[
-                styles.cardContainer,
-                {
-                  transform: [{ scale }],
-                  opacity,
+              onHandlerStateChange={({ nativeEvent }) => {
+                if (nativeEvent.state === State.ACTIVE) {
+                  handleLongPress(priority);
                 }
-              ]}
+              }}
+              minDurationMs={600} // Durée standard pour un long press
             >
-              <TouchableOpacity activeOpacity={0.9}>
-                <LinearGradient
-                  colors={priority.urgent 
-                    ? ['#FF6B6B', '#FF8787']
-                    : themeName === 'child'
-                      ? ['#4FC3F7', '#29B6F6'] 
-                      : [colors.card, colors.background]
+              <TapGestureHandler
+                numberOfTaps={2}
+                onHandlerStateChange={({ nativeEvent }) => {
+                  if (nativeEvent.state === State.ACTIVE) {
+                    handleDoubleTap(priority.id);
                   }
+                }}
+              >
+                <Animated.View
                   style={[
-                    styles.card,
-                    priority.urgent && styles.urgentCard,
-                    { 
-                      borderColor: priority.urgent 
-                        ? 'transparent' 
-                        : colors.border,
-                      shadowColor: priority.urgent 
-                        ? '#FF6B6B' 
-                        : colors.shadow
-                    }
+                    styles.cardWrapper,
+                    { transform: [{ scale: themeName === 'child' && priority.completed ? childBounceAnim : scale }], opacity },
                   ]}
                 >
-                  {/* Emoji décoratif */}
-                  <View style={styles.emojiContainer}>
-                    <Text style={styles.cardEmoji}>{priority.emoji}</Text>
-                    {priority.urgent && (
-                      <View style={styles.urgentBadge}>
-                        <Text style={styles.urgentText}>URGENT</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Contenu */}
-                  <View style={styles.cardContent}>
-                    <Text style={[
-                      styles.cardTime,
-                      { color: priority.urgent ? 'rgba(255,255,255,0.9)' : colors.textSecondary }
-                    ]}>
-                      {priority.time}
-                    </Text>
-                    <Text style={[
-                      styles.cardTitle,
-                      { color: priority.urgent ? 'white' : colors.text }
-                    ]}>
-                      {priority.title}
-                    </Text>
-                  </View>
-
-                  {/* Action button */}
-                  <TouchableOpacity 
+                  <LinearGradient
+                    colors={
+                      priority.urgent
+                        ? priority.completed ? [colors.border, colors.textTertiary+'33'] : ['#FF6B6B', '#FF8787']
+                        : priority.completed ? [colors.border, colors.textTertiary+'33']
+                          : themeName === 'child' ? ['#4FC3F7', '#29B6F6']
+                            : [colors.card, colors.card]
+                    }
                     style={[
-                      styles.actionButton,
-                      priority.urgent && styles.urgentActionButton
+                      styles.card,
+                      {
+                        borderColor: priority.completed ? colors.border : (priority.urgent ? 'transparent' : colors.border),
+                        shadowColor: priority.urgent && !priority.completed ? '#FF6B6B' : colors.shadow,
+                        borderWidth: (themeName !== 'child' && !priority.urgent && !priority.completed) ? 1 : 0,
+                      },
                     ]}
                   >
-                    <Text style={styles.actionButtonText}>→</Text>
-                  </TouchableOpacity>
+                    <View style={styles.cardHeader}>
+                      <Text style={[styles.cardEmoji, { fontSize: fontSizeBase * 1.8 }]}>{priority.emoji}</Text>
+                      <View style={styles.cardTitleContainer}>
+                        <Text
+                          style={[
+                            styles.cardTitle,
+                            {
+                              color: (priority.urgent || themeName === 'child') && !priority.completed ? 'white' : colors.text,
+                              textDecorationLine: priority.completed ? 'line-through' : 'none',
+                              fontSize: fontSizeBase * 1.05,
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {priority.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.cardTime,
+                            {
+                              color: (priority.urgent || themeName === 'child') && !priority.completed ? 'rgba(255,255,255,0.85)' : colors.textSecondary,
+                              textDecorationLine: priority.completed ? 'line-through' : 'none',
+                              fontSize: fontSizeBase * 0.85,
+                            },
+                          ]}
+                        >
+                          {priority.time}
+                        </Text>
+                      </View>
+                    </View>
 
-                  {/* Animation pour le thème enfant */}
-                  {themeName === 'child' && priority.urgent && (
-                    <Animated.View style={styles.pulseAnimation}>
-                      <View style={styles.pulseCircle} />
-                    </Animated.View>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
+                    {priority.urgent && !priority.completed && (
+                      <View style={styles.urgentBadge}>
+                        <Text style={[styles.urgentText, { fontSize: fontSizeBase * 0.65 }]}>URGENT</Text>
+                      </View>
+                    )}
+
+                    {!priority.completed && (
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButtonOnCard,
+                          {
+                            backgroundColor: (priority.urgent || themeName === 'child') ? 'rgba(255,255,255,0.25)' : colors.primary + '2A',
+                            borderColor: (priority.urgent || themeName === 'child') ? 'rgba(255,255,255,0.4)' : colors.primary + '55',
+                            borderWidth: 1,
+                          },
+                        ]}
+                        onPress={() => onCardActionPress ? onCardActionPress(priority) : Alert.alert("Action", `Ouvrir les détails pour: ${priority.title}`)}
+                      >
+                        <Text
+                          style={[
+                            styles.actionButtonOnCardText,
+                            {
+                              color: (priority.urgent || themeName === 'child') ? 'white' : colors.primary,
+                              fontSize: fontSizeBase * 0.8,
+                            },
+                          ]}
+                        >
+                          {getCardButtonText(priority)}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {priority.completed && (
+                      <View style={styles.completedOverlay}>
+                        <Text style={[styles.completedCheck, { fontSize: fontSizeBase * 2.2 }]}>✅</Text>
+                      </View>
+                    )}
+                  </LinearGradient>
+                </Animated.View>
+              </TapGestureHandler>
+            </LongPressGestureHandler>
           );
         })}
       </Animated.ScrollView>
@@ -165,125 +297,115 @@ export default function PrioritiesCarousel({ priorities }: Props) {
 const styles = StyleSheet.create({
   container: {
     marginBottom: 24,
-    marginHorizontal: -20,
   },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     marginBottom: 16,
   },
-
   sectionTitle: {
-    fontSize: 18,
     fontWeight: '700',
   },
-
   viewAllButton: {
     paddingVertical: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8, // Moins de padding pour un look plus compact
   },
-
   viewAllText: {
-    fontSize: 14,
     fontWeight: '600',
   },
-
   scrollContent: {
-    paddingHorizontal: 20,
+    // paddingHorizontal: EDGE_PADDING, // Appliqué dans le JSX
   },
-
-  cardContainer: {
+  cardWrapper: {
     width: CARD_WIDTH,
     marginRight: CARD_SPACING,
+    // Ajout d'une petite perspective pour l'effet de profondeur avec scale
+    // perspective: 1000, // Peut être nécessaire sur certaines plateformes pour le scale 3D
   },
-
   card: {
     borderRadius: 20,
-    padding: 20,
-    minHeight: 120,
-    borderWidth: 1,
+    padding: 16, // Padding standardisé
+    minHeight: 135, // Hauteur un peu augmentée
+    justifyContent: 'space-between',
+    shadowOffset: { width: 0, height: 5 }, // Ombre un peu plus marquée
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 6,
+    overflow: 'visible', // Permettre aux badges de déborder légèrement si besoin
+  },
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    alignItems: 'flex-start', // Maintenir l'alignement en haut
+    marginBottom: 8, // Espace avant le bouton d'action
   },
-
-  urgentCard: {
-    borderWidth: 0,
-    shadowOpacity: 0.3,
-  },
-
-  emojiContainer: {
-    marginRight: 16,
-    alignItems: 'center',
-  },
-
   cardEmoji: {
-    fontSize: 36,
+    marginRight: 12,
   },
-
-  urgentBadge: {
-    position: 'absolute',
-    top: -8,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-
-  urgentText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'white',
-  },
-
-  cardContent: {
+  cardTitleContainer: {
     flex: 1,
   },
-
-  cardTime: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    marginBottom: 2, // Espace réduit
   },
-
-  actionButton: {
-    width: 40,
-    height: 40,
+  cardTime: {
+    opacity: 0.9,
+  },
+  urgentBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.3)', // Badge plus contrasté
+    paddingHorizontal: 10,
+    paddingVertical: 5, // Légèrement plus grand
+    borderRadius: 10,
+  },
+  urgentText: {
+    fontWeight: 'bold', // Texte du badge en gras
+    color: 'white',
+  },
+  actionButtonOnCard: {
+    paddingVertical: 10, // Hauteur du bouton
+    paddingHorizontal: 14,
+    borderRadius: 12, // Coins plus arrondis
+    alignSelf: 'flex-start',
+    marginTop: 'auto', // Pousse le bouton en bas si l'espace le permet
+  },
+  actionButtonOnCardText: {
+    fontWeight: 'bold', // Texte du bouton en gras
+  },
+  completedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(120, 144, 156, 0.15)', // Gris plus neutre et transparent
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  urgentActionButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  completedCheck: {
+    opacity: 0.8,
   },
-
-  actionButtonText: {
-    fontSize: 20,
-    color: 'white',
+  emptyStateCard: {
+    width: CARD_WIDTH,
+    padding: 25,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 135,
+    alignSelf: 'center',
+    borderWidth: 1,
   },
-
-  pulseAnimation: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
+  emptyStateEmoji: {
+    marginBottom: 12,
   },
-
-  pulseCircle: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'white',
+  emptyStateText: {
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  emptyStateSubText: {
+    textAlign: 'center',
+    lineHeight: 18,
+    opacity: 0.8,
   },
 });

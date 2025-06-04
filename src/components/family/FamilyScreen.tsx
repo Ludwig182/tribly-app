@@ -1,5 +1,5 @@
 // src/components/family/FamilyScreen.tsx - Version avec couleurs du thème pour le header
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, SafeAreaView, StyleSheet, Platform, StatusBar, ActivityIndicator } from 'react-native'; // Ajout de ActivityIndicator
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFamily } from '../../hooks/useFamily';
@@ -9,7 +9,12 @@ import FamilyMemberCard from './FamilyMemberCard';
 import FamilySettings from './FamilySettings';
 import EditProfileModal from './EditProfileModal';
 
-const FamilyScreen = () => {
+interface FamilyScreenProps {
+  initialMode?: 'view' | 'edit';
+  memberId?: string;
+}
+
+const FamilyScreen = ({ initialMode = 'view', memberId }: FamilyScreenProps) => {
   const {
     familyData,
     currentMember,
@@ -19,6 +24,15 @@ const FamilyScreen = () => {
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+
+  useEffect(() => {
+    if (initialMode === 'edit' && memberId) {
+      const memberToEdit = familyData?.members?.find(m => m.id === memberId);
+      if (memberToEdit) {
+        openEditModal(memberToEdit);
+      }
+    }
+  }, [initialMode, memberId, familyData]);
 
   if (loading && !familyData) {
     return (
