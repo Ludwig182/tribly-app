@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, StatusBar, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +28,13 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
 
   const [isEventModalVisible, setIsEventModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | undefined>();
+
+  // Initialiser le viewMode avec la valeur du prop
+  useEffect(() => {
+    if (initialViewMode && initialViewMode !== viewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode, setViewMode]);
 
   const handleEventSelect = (event: CalendarEvent) => {
     setSelectedEvent(event);

@@ -6,7 +6,7 @@ import { CalendarProvider } from '../../src/hooks/useCalendar';
 export default function CalendarTab() {
   return (
     <CalendarProvider>
-      <CalendarScreen />
+      <CalendarScreen initialViewMode="agenda" />
     </CalendarProvider>
   );
 }

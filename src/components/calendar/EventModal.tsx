@@ -505,7 +505,15 @@ const EventModal: React.FC<EventModalProps> = ({
                 backgroundColor: theme.colors.surface,
                 borderColor: theme.colors.border
               }]}
-              onPress={() => setShowStartDatePicker(true)}
+              onPress={() => {
+                console.log('🔍 EventModal - Opening start date picker');
+                try {
+                  setShowStartDatePicker(true);
+                  console.log('✅ EventModal - Start date picker state set to true');
+                } catch (error) {
+                  console.error('💥 EventModal - Error opening start date picker:', error);
+                }
+              }}
             >
               <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Début</Text>
               <Text style={[styles.dateValue, { color: theme.colors.text }]}>
@@ -733,31 +741,49 @@ const EventModal: React.FC<EventModalProps> = ({
         </ScrollView>
 
         {/* Date Pickers */}
-        <DatePicker
-          visible={showStartDatePicker}
-          date={startDate}
-          mode={isAllDay ? 'date' : 'datetime'}
-          onConfirm={(date) => {
-            setStartDate(date);
-            if (!isAllDay && date >= endDate) {
-              setEndDate(new Date(date.getTime() + 60 * 60 * 1000));
-            }
-            setShowStartDatePicker(false);
-          }}
-          onCancel={() => setShowStartDatePicker(false)}
-        />
+        {showStartDatePicker && (
+          <DatePicker
+            visible={showStartDatePicker}
+            date={startDate}
+            mode={'date'}
+            onConfirm={(date) => {
+              console.log('🔍 EventModal - DatePicker onConfirm called with:', date.toISOString());
+              try {
+                setStartDate(date);
+                if (!isAllDay && date >= endDate) {
+                  setEndDate(new Date(date.getTime() + 60 * 60 * 1000));
+                }
+                setShowStartDatePicker(false);
+                console.log('✅ EventModal - Start date updated successfully');
+              } catch (error) {
+                console.error('💥 EventModal - Error in onConfirm:', error);
+              }
+            }}
+            onCancel={() => {
+              console.log('❌ EventModal - DatePicker onCancel called');
+              try {
+                setShowStartDatePicker(false);
+                console.log('✅ EventModal - Start date picker closed');
+              } catch (error) {
+                console.error('💥 EventModal - Error in onCancel:', error);
+              }
+            }}
+          />
+        )}
 
-        <DatePicker
-          visible={showEndDatePicker}
-          date={endDate}
-          mode="datetime"
-          minimumDate={startDate}
-          onConfirm={(date) => {
-            setEndDate(date);
-            setShowEndDatePicker(false);
-          }}
-          onCancel={() => setShowEndDatePicker(false)}
-        />
+        {showEndDatePicker && (
+          <DatePicker
+            visible={showEndDatePicker}
+            date={endDate}
+            mode={'date'}
+            minimumDate={startDate}
+            onConfirm={(date) => {
+              setEndDate(date);
+              setShowEndDatePicker(false);
+            }}
+            onCancel={() => setShowEndDatePicker(false)}
+          />
+        )}
 
         {/* Recurrence Selector */}
         <RecurrenceSelector

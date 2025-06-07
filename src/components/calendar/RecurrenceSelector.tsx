@@ -157,6 +157,183 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
     return preview;
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+    },
+    headerButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    headerButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 16,
+    },
+    section: {
+      marginVertical: 12,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 8,
+      color: theme.colors.text,
+    },
+    typeContainer: {
+      gap: 8,
+    },
+    typeButton: {
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    typeLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    typeDescription: {
+      fontSize: 14,
+      marginTop: 2,
+    },
+    intervalContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    intervalLabel: {
+      fontSize: 16,
+    },
+    intervalInput: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 16,
+      textAlign: 'center',
+      minWidth: 50,
+    },
+    weekDaysContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    weekDayButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      borderWidth: 1,
+      minWidth: 45,
+      alignItems: 'center',
+    },
+    weekDayText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    monthDayContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    monthDayInput: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 16,
+      textAlign: 'center',
+      minWidth: 60,
+    },
+    endContainer: {
+      gap: 12,
+    },
+    endOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
+    },
+    endOptionLabel: {
+      fontSize: 16,
+    },
+    endDateContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+    },
+    endDateButton: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    endDateText: {
+      fontSize: 16,
+    },
+    occurrencesContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+    },
+    occurrencesInput: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 16,
+      textAlign: 'center',
+      minWidth: 80,
+    },
+    previewContainer: {
+      marginTop: 16,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    previewLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    previewText: {
+      fontSize: 16,
+    },
+    removeContainer: {
+      marginTop: 16,
+      alignItems: 'center',
+    },
+    removeButton: {
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    removeButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
+
   return (
     <Modal
       visible={visible}
@@ -164,20 +341,20 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onCancel}
     >
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
+      <View style={styles.container}>
+        <View style={styles.header}>
           <TouchableOpacity onPress={onCancel} style={styles.headerButton}>
-            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>
+            <Text style={styles.headerButtonText}>
               Annuler
             </Text>
           </TouchableOpacity>
           
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+          <Text style={styles.headerTitle}>
             Récurrence
           </Text>
           
           <TouchableOpacity onPress={handleConfirm} style={styles.headerButton}>
-            <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>
+            <Text style={styles.headerButtonText}>
               Confirmer
             </Text>
           </TouchableOpacity>
@@ -186,7 +363,7 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Recurrence Type */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Type de récurrence</Text>
+            <Text style={styles.label}>Type de récurrence</Text>
             <View style={styles.typeContainer}>
               {recurrenceTypes.map((recurrenceType) => (
                 <TouchableOpacity
@@ -459,152 +636,6 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
       </View>
     </Modal>
   );
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    headerButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 4,
-    },
-    headerButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: 16,
-    },
-    section: {
-      marginVertical: 12,
-    },
-    label: {
-      fontSize: 16,
-      fontWeight: '600',
-      marginBottom: 8,
-    },
-    typeContainer: {
-      gap: 8,
-    },
-    typeButton: {
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
-    typeLabel: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    typeDescription: {
-      fontSize: 14,
-      marginTop: 2,
-    },
-    intervalContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    intervalLabel: {
-      fontSize: 16,
-    },
-    intervalInput: {
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      fontSize: 16,
-      textAlign: 'center',
-      minWidth: 50,
-    },
-    input: {
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      fontSize: 16,
-    },
-    weekDaysContainer: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 8,
-    },
-    weekDayButton: {
-      flex: 1,
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingVertical: 12,
-      alignItems: 'center',
-    },
-    weekDayLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-    },
-    monthsContainer: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    monthButton: {
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    monthLabel: {
-      fontSize: 14,
-      fontWeight: '500',
-    },
-    endOption: {
-      marginBottom: 16,
-    },
-    switchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    endOptionLabel: {
-      fontSize: 16,
-    },
-    previewContainer: {
-      borderWidth: 1,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
-    previewText: {
-      fontSize: 16,
-      fontStyle: 'italic',
-    },
-    removeButton: {
-      paddingVertical: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-      marginBottom: 40,
-    },
-    removeButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    hint: {
-      fontSize: 12,
-      fontStyle: 'italic',
-    },
-  });
 };
 
 export default RecurrenceSelector;
