@@ -1,278 +1,207 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Modal,
   View,
   Text,
-  TouchableOpacity,
-  Modal,
   StyleSheet,
-  Platform
+  TouchableOpacity,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useTheme } from '../../theme/useTheme';
 
-type DatePickerProps = {
-  visible: boolean;
-  date: Date;
-  mode?: 'date' | 'time' | 'datetime';
-  minimumDate?: Date;
-  maximumDate?: Date;
-  onConfirm: (date: Date) => void;
-  onCancel: () => void;
-};
+export default function DatePicker({ visible, onClose, onConfirm, onCancel }) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showYearSelector, setShowYearSelector] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  
+  // Générer une liste d'années (de l'année actuelle - 5 à l'année actuelle + 10)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 16 }, (_, i) => currentYear - 5 + i);
 
-const DatePicker: React.FC<DatePickerProps> = ({
-  visible,
-  date,
-  mode = 'datetime',
-  minimumDate,
-  maximumDate,
-  onConfirm,
-  onCancel
-}) => {
-  const theme = useTheme();
-  const [selectedDate, setSelectedDate] = React.useState(date);
-  const [currentMode, setCurrentMode] = React.useState<'date' | 'time'>(mode === 'datetime' ? 'date' : mode);
-  const [showTimePicker, setShowTimePicker] = React.useState(false);
-
-  React.useEffect(() => {
-    setSelectedDate(date);
-    setCurrentMode(mode === 'datetime' ? 'date' : mode);
-    setShowTimePicker(false);
-  }, [date, mode, visible]);
-
-  const handleDateChange = (event: any, newDate?: Date) => {
-    if (Platform.OS === 'android') {
-      if (event.type === 'dismissed') {
-        onCancel();
-        return;
-      }
-      
-      if (newDate) {
-        if (mode === 'datetime' && currentMode === 'date') {
-          setSelectedDate(newDate);
-          setCurrentMode('time');
-          setShowTimePicker(true);
-        } else {
-          onConfirm(newDate);
-        }
-      }
-    } else {
-      if (newDate) {
-        setSelectedDate(newDate);
-      }
+  const onDateChange = (event, date) => {
+    setShowDatePicker(false);
+    if (date) {
+      setSelectedDate(date);
     }
   };
-
-  const handleConfirm = () => {
-    onConfirm(selectedDate);
+  
+  const selectYear = (year) => {
+    const newDate = new Date(selectedDate);
+    newDate.setFullYear(year);
+    setSelectedDate(newDate);
+    setShowYearSelector(false);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDateTime = (date: Date) => {
-    return `${formatDate(date)} à ${formatTime(date)}`;
-  };
-
-  const getDisplayText = () => {
-    switch (mode) {
-      case 'date':
-        return formatDate(selectedDate);
-      case 'time':
-        return formatTime(selectedDate);
-      case 'datetime':
-        return formatDateTime(selectedDate);
-      default:
-        return '';
-    }
-  };
-
-  const getTitle = () => {
-    switch (mode) {
-      case 'date':
-        return 'Sélectionner une date';
-      case 'time':
-        return 'Sélectionner une heure';
-      case 'datetime':
-        return 'Sélectionner date et heure';
-      default:
-        return 'Sélectionner';
-    }
-  };
-
-  if (Platform.OS === 'android') {
-    // Android uses native date picker
-    return (
-      <>
-        {visible && (
-          <DateTimePicker
-            value={selectedDate}
-            mode={currentMode}
-            display="default"
-            minimumDate={minimumDate}
-            maximumDate={maximumDate}
-            onChange={handleDateChange}
-          />
-        )}
-        {showTimePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="time"
-            display="default"
-            onChange={handleDateChange}
-          />
-        )}
-      </>
-    );
-  }
-
-  // iOS uses modal with custom styling
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onCancel}
-    >
-      <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity onPress={onCancel} style={styles.headerButton}>
-              <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>
-                Annuler
-              </Text>
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={() => {
+      if (typeof onCancel === 'function') {
+        onCancel();
+      } else if (typeof onClose === 'function') {
+        onClose();
+      }
+    }}>
+      <View style={styles.dateModalOverlay}>
+        <View style={styles.dateModalContent}>
+          <View style={styles.dateModalHeader}>
+            <Text style={styles.dateModalTitle}>Sélect. date & heure</Text>
+            <TouchableOpacity style={styles.dateModalCancelBtn} onPress={() => {
+              setShowDatePicker(false);
+              setShowYearSelector(false);
+              if (typeof onCancel === 'function') {
+                onCancel();
+              } else if (typeof onClose === 'function') {
+                onClose();
+              }
+            }}>
+              <Text style={styles.dateModalCancelText}>Annuler</Text>
             </TouchableOpacity>
-            
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-              {getTitle()}
-            </Text>
-            
-            <TouchableOpacity onPress={handleConfirm} style={styles.headerButton}>
-              <Text style={[styles.headerButtonText, { color: theme.colors.primary }]}>
-                Confirmer
-              </Text>
+            <TouchableOpacity style={styles.dateModalConfirmBtn} onPress={() => {
+              if (typeof onConfirm === 'function') {
+                onConfirm(selectedDate);
+              }
+            }}>
+              <Text style={styles.dateModalConfirmText}>OK</Text>
             </TouchableOpacity>
           </View>
-
-          <View style={styles.content}>
-            <View style={[styles.selectedDateContainer, { backgroundColor: theme.colors.background }]}>
-              <Text style={[styles.selectedDateText, { color: theme.colors.text }]}>
-                {getDisplayText()}
-              </Text>
-            </View>
-
-            <View style={styles.pickerContainer}>
-              {mode === 'datetime' ? (
-                <>
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display="wheels"
-                    minimumDate={minimumDate}
-                    maximumDate={maximumDate}
-                    onChange={handleDateChange}
-                    style={styles.picker}
-                    textColor={theme.colors.text}
-                  />
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="time"
-                    display="wheels"
-                    onChange={handleDateChange}
-                    style={styles.picker}
-                    textColor={theme.colors.text}
-                  />
-                </>
-              ) : (
+          <View style={styles.datePickerContainer}>
+            {showYearSelector ? (
+              <View style={styles.yearSelectorContainer}>
+                <ScrollView style={styles.yearScrollView}>
+                  {years.map((year) => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[styles.yearItem, selectedDate.getFullYear() === year && styles.selectedYearItem]}
+                      onPress={() => selectYear(year)}
+                    >
+                      <Text style={[styles.yearText, selectedDate.getFullYear() === year && styles.selectedYearText]}>
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.yearSelectorButton} 
+                  onPress={() => setShowYearSelector(true)}
+                >
+                  <Text style={styles.yearSelectorButtonText}>
+                    Année: {selectedDate.getFullYear()} (Modifier)
+                  </Text>
+                </TouchableOpacity>
                 <DateTimePicker
                   value={selectedDate}
-                  mode={mode}
-                  display="wheels"
-                  minimumDate={minimumDate}
-                  maximumDate={maximumDate}
-                  onChange={handleDateChange}
-                  style={styles.picker}
-                  textColor={theme.colors.text}
+                  mode="datetime"
+                  display="spinner"
+                  onChange={onDateChange}
+                  minimumDate={new Date(1900, 0, 1)}
+                  textColor="#000000"
+                  style={styles.datePickerSpinner}
                 />
-              )}
-            </View>
+              </>
+            )}
           </View>
         </View>
       </View>
     </Modal>
   );
+}
 
-  const styles = StyleSheet.create({
-    overlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'flex-end',
-    },
-    container: {
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      maxHeight: '70%',
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      borderBottomWidth: 1,
-    },
-    headerButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 4,
-      minWidth: 80,
-    },
-    headerButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      textAlign: 'center',
-      flex: 1,
-    },
-    content: {
-      paddingBottom: 20,
-    },
-    selectedDateContainer: {
-      marginHorizontal: 16,
-      marginTop: 16,
-      marginBottom: 8,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      alignItems: 'center',
-    },
-    selectedDateText: {
-      fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    pickerContainer: {
-      paddingHorizontal: 16,
-    },
-    picker: {
-      height: 120,
-    },
-  });
-};
-
-export default DatePicker;
+const styles = StyleSheet.create({
+  dateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  dateModalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+    maxHeight: '60%',
+  },
+  dateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  dateModalCancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  dateModalCancelText: {
+    fontSize: 16,
+    color: '#f56565',
+    fontWeight: '500',
+  },
+  dateModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+  dateModalConfirmBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  dateModalConfirmText: {
+    fontSize: 16,
+    color: '#48bb78',
+    fontWeight: '600',
+  },
+  datePickerContainer: {
+    minHeight: 250,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  datePickerSpinner: {
+    height: 200,
+    width: '100%',
+  },
+  yearSelectorButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginBottom: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  yearSelectorButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2d3748',
+  },
+  yearSelectorContainer: {
+    width: '100%',
+    height: 250,
+    backgroundColor: 'white',
+  },
+  yearScrollView: {
+    width: '100%',
+  },
+  yearItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    alignItems: 'center',
+  },
+  selectedYearItem: {
+    backgroundColor: '#e6f7ff',
+  },
+  yearText: {
+    fontSize: 18,
+    color: '#2d3748',
+  },
+  selectedYearText: {
+    fontWeight: 'bold',
+    color: '#0066cc',
+  },
+});
