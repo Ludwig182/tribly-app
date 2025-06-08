@@ -41,7 +41,7 @@ export const calendarService = {
 
   async addEvent(familyId, eventData, currentUser) {
     try {
-      console.log('🔄 Ajout événement:', { familyId, eventData, currentUser: currentUser.name });
+      console.log('🔄 Ajout événement:', { familyId, eventData, currentUser: currentUser?.name || 'unknown' });
       
       // Validation de base
       if (!eventData.title) {
@@ -59,7 +59,7 @@ export const calendarService = {
         startDate: this.toTimestamp(eventData.startDate),
         endDate: eventData.endDate ? this.toTimestamp(eventData.endDate) : null,
         recurrenceEndDate: eventData.recurrenceEndDate ? this.toTimestamp(eventData.recurrenceEndDate) : null,
-        createdBy: currentUser.id,
+        createdBy: typeof currentUser === 'string' ? currentUser : (currentUser?.id || 'unknown'),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -170,7 +170,20 @@ export const calendarService = {
     return onSnapshot(q, (snapshot) => {
       const events = [];
       snapshot.forEach((doc) => {
-        events.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        const event = {
+          id: doc.id,
+          ...data,
+          startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.startDate || null),
+          endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.endDate || null),
+        };
+        if (event.recurrence && event.recurrence.endDate?.toDate) {
+          event.recurrence.endDate = event.recurrence.endDate.toDate();
+        }
+        if (data.completedAt?.toDate) {
+          event.completedAt = data.completedAt.toDate();
+        }
+        events.push(event);
       });
       
       console.log('✅ Événements Firebase synchronisés:', events.length);
@@ -197,7 +210,20 @@ export const calendarService = {
     return onSnapshot(q, (snapshot) => {
       const events = [];
       snapshot.forEach((doc) => {
-        events.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        const event = {
+          id: doc.id,
+          ...data,
+          startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.startDate || null),
+          endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.endDate || null),
+        };
+        if (event.recurrence && event.recurrence.endDate?.toDate) {
+          event.recurrence.endDate = event.recurrence.endDate.toDate();
+        }
+        if (data.completedAt?.toDate) {
+          event.completedAt = data.completedAt.toDate();
+        }
+        events.push(event);
       });
       
       console.log(`✅ Événements pour ${month+1}/${year} synchronisés:`, events.length);

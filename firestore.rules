@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Mode développement - Accès complet pour toutes les collections
+    // À remplacer par des règles de sécurité appropriées en production
+    
+    // Règles pour la collection families et ses sous-collections
+    match /families/{familyId} {
+      // Accès complet à la famille pour le développement
+      allow read, write: if true;
+      
+      // Accès complet aux événements du calendrier pour le développement
+      match /events/{eventId} {
+        allow read, write: if true;
+      }
+      
+      // Accès complet aux tâches pour le développement
+      match /tasks/{taskId} {
+        allow read, write: if true;
+      }
+      
+      // Accès complet aux listes de courses pour le développement
+      match /shopping/{listId} {
+        allow read, write: if true;
+      }
+    }
+    
+    // Règle par défaut - refuser tout accès non explicitement autorisé
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    /* 
+    // RÈGLES DE PRODUCTION À IMPLÉMENTER ULTÉRIEUREMENT
+    // Fonctions utilitaires pour les règles
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Règles pour la collection families
+    match /families/{familyId} {
+      // Accès à la famille
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
+      
+      // Règles pour les événements du calendrier
+      match /events/{eventId} {
+        allow read, write: if isAuthenticated();
+      }
+      
+      // Règles pour les tâches
+      match /tasks/{taskId} {
+        allow read, write: if isAuthenticated();
+      }
+      
+      // Règles pour les listes de courses
+      match /shopping/{listId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+    */
+  }
+}

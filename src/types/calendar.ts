@@ -2,7 +2,17 @@
 import { Timestamp } from 'firebase/firestore';
 
 export type EventType = 'family' | 'personal' | 'reminder' | 'task' | 'appointment';
-export type EventRecurrence = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+export interface EventRecurrence {
+  type: RecurrenceType;
+  interval: number;
+  daysOfWeek?: number[];
+  dayOfMonth?: number;
+  monthOfYear?: number;
+  endDate?: string;
+  occurrences?: number;
+}
 
 export interface CalendarEvent {
   id: string;
@@ -23,6 +33,9 @@ export interface CalendarEvent {
   completedBy?: string;   // ID du membre qui a complété l'événement
   completedAt?: Date | Timestamp;
   tribs?: number;         // Points Tribs associés (pour tâches)
+  // Propriétés pour les instances d'événements récurrents
+  isRecurrenceInstance?: boolean; // Indique si c'est une instance générée d'un événement récurrent
+  recurrenceParentId?: string;    // ID de l'événement parent pour les instances récurrentes
 }
 
 export interface CalendarViewState {

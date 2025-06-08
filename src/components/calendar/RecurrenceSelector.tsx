@@ -89,6 +89,11 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
   };
 
   const handleConfirm = () => {
+    // Vérification de sécurité pour éviter l'erreur toISOString sur undefined
+    if (hasEndDate && !endDate) {
+      setHasEndDate(false);
+    }
+    
     const newRecurrence: EventRecurrence = {
       type,
       interval,
@@ -98,7 +103,7 @@ const RecurrenceSelector: React.FC<RecurrenceSelectorProps> = ({
       ...(hasEndDate && endDate && { endDate: endDate.toISOString() }),
       ...(hasOccurrences && occurrences && { occurrences })
     };
-
+  
     onConfirm(newRecurrence);
   };
 

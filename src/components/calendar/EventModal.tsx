@@ -56,7 +56,9 @@ const EventModal: React.FC<EventModalProps> = ({
 
   // UI state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showRecurrenceSelector, setShowRecurrenceSelector] = useState(false);
 
   const eventTypes: { value: EventType; label: string; icon: string }[] = [
@@ -99,7 +101,7 @@ const EventModal: React.FC<EventModalProps> = ({
       setLocation(event.location || '');
       setType(event.type);
       setPriority(event.priority);
-      setIsAllDay(event.isAllDay);
+      setIsAllDay(event.allDay); // Correction: event.isAllDay -> event.allDay
       setStartDate(new Date(event.startDate));
       setEndDate(event.endDate ? new Date(event.endDate) : new Date(event.startDate));
       setAssignedTo(event.assignedTo || []);
@@ -147,18 +149,18 @@ const EventModal: React.FC<EventModalProps> = ({
     const eventData: Partial<CalendarEvent> = {
       ...(event && { id: event.id }),
       title: title.trim(),
-      description: description.trim() || undefined,
-      location: location.trim() || undefined,
+      description: description.trim() || null,
+      location: location.trim() || null,
       type,
       priority,
-      isAllDay,
+      allDay: isAllDay, // Correction: isAllDay -> allDay pour correspondre au type CalendarEvent
       startDate: startDate.toISOString(),
-      endDate: isAllDay ? undefined : endDate.toISOString(),
-      assignedTo: assignedTo.length > 0 ? assignedTo : undefined,
-      tribsReward: tribsReward ? parseInt(tribsReward) : undefined,
-      color: color || undefined,
-      recurrence: recurrence || undefined,
-      reminders: reminders.length > 0 ? reminders : undefined,
+      endDate: isAllDay ? null : endDate.toISOString(),
+      assignedTo: assignedTo.length > 0 ? assignedTo : null,
+      tribsReward: tribsReward ? parseInt(tribsReward) : null,
+      color: color || null,
+      recurrence: recurrence || null,
+      reminders: reminders.length > 0 ? reminders : null,
       status: event?.status || 'pending'
     };
 
@@ -500,40 +502,86 @@ const EventModal: React.FC<EventModalProps> = ({
           <View style={styles.section}>
             <Text style={[styles.label, { color: theme.colors.text }]}>Date et heure</Text>
             
-            <TouchableOpacity
-              style={[styles.dateButton, { 
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border
-              }]}
-              onPress={() => {
-                console.log('🔍 EventModal - Opening start date picker');
-                try {
-                  setShowStartDatePicker(true);
-                  console.log('✅ EventModal - Start date picker state set to true');
-                } catch (error) {
-                  console.error('💥 EventModal - Error opening start date picker:', error);
-                }
-              }}
-            >
-              <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Début</Text>
-              <Text style={[styles.dateValue, { color: theme.colors.text }]}>
-                {isAllDay ? formatDate(startDate) : formatDateTime(startDate)}
-              </Text>
-            </TouchableOpacity>
-
-            {!isAllDay && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <TouchableOpacity
                 style={[styles.dateButton, { 
                   backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border
+                  borderColor: theme.colors.border,
+                  flex: 1,
+                  marginRight: isAllDay ? 0 : 5
                 }]}
-                onPress={() => setShowEndDatePicker(true)}
+                onPress={() => {
+                  console.log('🔍 EventModal - Opening start date picker');
+                  try {
+                    setShowStartDatePicker(true);
+                    console.log('✅ EventModal - Start date picker state set to true');
+                  } catch (error) {
+                    console.error('💥 EventModal - Error opening start date picker:', error);
+                  }
+                }}
               >
-                <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Fin</Text>
+                <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Date de début</Text>
                 <Text style={[styles.dateValue, { color: theme.colors.text }]}>
-                  {formatDateTime(endDate)}
+                  {formatDate(startDate)}
                 </Text>
               </TouchableOpacity>
+
+              {!isAllDay && (
+                <TouchableOpacity
+                  style={[styles.dateButton, { 
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    flex: 1,
+                    marginLeft: 5
+                  }]}
+                  onPress={() => {
+                    try {
+                      setShowStartTimePicker(true);
+                    } catch (error) {
+                      console.error('💥 EventModal - Error opening start time picker:', error);
+                    }
+                  }}
+                >
+                  <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Heure de début</Text>
+                  <Text style={[styles.dateValue, { color: theme.colors.text }]}>
+                    {startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {!isAllDay && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                <TouchableOpacity
+                  style={[styles.dateButton, { 
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    flex: 1,
+                    marginRight: 5
+                  }]}
+                  onPress={() => setShowEndDatePicker(true)}
+                >
+                  <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Date de fin</Text>
+                  <Text style={[styles.dateValue, { color: theme.colors.text }]}>
+                    {formatDate(endDate)}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.dateButton, { 
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    flex: 1,
+                    marginLeft: 5
+                  }]}
+                  onPress={() => setShowEndTimePicker(true)}
+                >
+                  <Text style={[styles.dateLabel, { color: theme.colors.textSecondary }]}>Heure de fin</Text>
+                  <Text style={[styles.dateValue, { color: theme.colors.text }]}>
+                    {endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -740,7 +788,7 @@ const EventModal: React.FC<EventModalProps> = ({
           )}
         </ScrollView>
 
-        {/* Date Pickers */}
+        {/* Date & Time Pickers */}
         {showStartDatePicker && (
           <DatePicker
             visible={showStartDatePicker}
@@ -749,9 +797,14 @@ const EventModal: React.FC<EventModalProps> = ({
             onConfirm={(date) => {
               console.log('🔍 EventModal - DatePicker onConfirm called with:', date.toISOString());
               try {
-                setStartDate(date);
-                if (!isAllDay && date >= endDate) {
-                  setEndDate(new Date(date.getTime() + 60 * 60 * 1000));
+                // Préserver l'heure actuelle
+                const newDate = new Date(date);
+                newDate.setHours(startDate.getHours(), startDate.getMinutes());
+                
+                setStartDate(newDate);
+                if (!isAllDay && newDate >= endDate) {
+                  const newEndDate = new Date(newDate.getTime() + 60 * 60 * 1000);
+                  setEndDate(newEndDate);
                 }
                 setShowStartDatePicker(false);
                 console.log('✅ EventModal - Start date updated successfully');
@@ -771,6 +824,31 @@ const EventModal: React.FC<EventModalProps> = ({
           />
         )}
 
+        {showStartTimePicker && (
+          <DatePicker
+            visible={showStartTimePicker}
+            date={startDate}
+            mode={'time'}
+            onConfirm={(date) => {
+              try {
+                // Préserver la date actuelle
+                const newDate = new Date(startDate);
+                newDate.setHours(date.getHours(), date.getMinutes());
+                
+                setStartDate(newDate);
+                if (newDate >= endDate) {
+                  const newEndDate = new Date(newDate.getTime() + 60 * 60 * 1000);
+                  setEndDate(newEndDate);
+                }
+                setShowStartTimePicker(false);
+              } catch (error) {
+                console.error('💥 EventModal - Error in time onConfirm:', error);
+              }
+            }}
+            onCancel={() => setShowStartTimePicker(false)}
+          />
+        )}
+
         {showEndDatePicker && (
           <DatePicker
             visible={showEndDatePicker}
@@ -778,10 +856,31 @@ const EventModal: React.FC<EventModalProps> = ({
             mode={'date'}
             minimumDate={startDate}
             onConfirm={(date) => {
-              setEndDate(date);
+              // Préserver l'heure actuelle
+              const newDate = new Date(date);
+              newDate.setHours(endDate.getHours(), endDate.getMinutes());
+              
+              setEndDate(newDate);
               setShowEndDatePicker(false);
             }}
             onCancel={() => setShowEndDatePicker(false)}
+          />
+        )}
+
+        {showEndTimePicker && (
+          <DatePicker
+            visible={showEndTimePicker}
+            date={endDate}
+            mode={'time'}
+            onConfirm={(date) => {
+              // Préserver la date actuelle
+              const newDate = new Date(endDate);
+              newDate.setHours(date.getHours(), date.getMinutes());
+              
+              setEndDate(newDate);
+              setShowEndTimePicker(false);
+            }}
+            onCancel={() => setShowEndTimePicker(false)}
           />
         )}
 

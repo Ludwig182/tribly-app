@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -10,19 +10,41 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-export default function DatePicker({ visible, onClose, onConfirm, onCancel }) {
-  const [showDatePicker, setShowDatePicker] = useState(false);
+export default function DatePicker({ visible, date, mode = 'datetime', minimumDate, onConfirm, onCancel }) {
   const [showYearSelector, setShowYearSelector] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(date ? new Date(date) : new Date());
   
+  // Mettre à jour la date sélectionnée lorsque la prop date change
+  useEffect(() => {
+    if (date) {
+      setSelectedDate(new Date(date));
+    }
+  }, [date]);
+
   // Générer une liste d'années (de l'année actuelle - 5 à l'année actuelle + 10)
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 16 }, (_, i) => currentYear - 5 + i);
 
-  const onDateChange = (event, date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setSelectedDate(date);
+  const onDateChange = (event, selectedValue) => {
+    if (event.type === 'set' && selectedValue) {
+      const newDate = new Date(selectedDate);
+      
+      if (mode === 'date') {
+        newDate.setFullYear(selectedValue.getFullYear());
+        newDate.setMonth(selectedValue.getMonth());
+        newDate.setDate(selectedValue.getDate());
+      } else if (mode === 'time') {
+        newDate.setHours(selectedValue.getHours());
+        newDate.setMinutes(selectedValue.getMinutes());
+      } else if (mode === 'datetime') {
+        newDate.setFullYear(selectedValue.getFullYear());
+        newDate.setMonth(selectedValue.getMonth());
+        newDate.setDate(selectedValue.getDate());
+        newDate.setHours(selectedValue.getHours());
+        newDate.setMinutes(selectedValue.getMinutes());
+      }
+      
+      setSelectedDate(newDate);
     }
   };
   
@@ -37,8 +59,6 @@ export default function DatePicker({ visible, onClose, onConfirm, onCancel }) {
     <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={() => {
       if (typeof onCancel === 'function') {
         onCancel();
-      } else if (typeof onClose === 'function') {
-        onClose();
       }
     }}>
       <View style={styles.dateModalOverlay}>
@@ -50,8 +70,6 @@ export default function DatePicker({ visible, onClose, onConfirm, onCancel }) {
               setShowYearSelector(false);
               if (typeof onCancel === 'function') {
                 onCancel();
-              } else if (typeof onClose === 'function') {
-                onClose();
               }
             }}>
               <Text style={styles.dateModalCancelText}>Annuler</Text>
@@ -93,12 +111,13 @@ export default function DatePicker({ visible, onClose, onConfirm, onCancel }) {
                 </TouchableOpacity>
                 <DateTimePicker
                   value={selectedDate}
-                  mode="datetime"
+                  mode={mode}
                   display="spinner"
                   onChange={onDateChange}
-                  minimumDate={new Date(1900, 0, 1)}
+                  minimumDate={minimumDate || new Date(1900, 0, 1)}
                   textColor="#000000"
                   style={styles.datePickerSpinner}
+                  themeVariant="light"
                 />
               </>
             )}
