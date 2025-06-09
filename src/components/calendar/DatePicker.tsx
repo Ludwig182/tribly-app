@@ -10,7 +10,27 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-export default function DatePicker({ visible, date, mode = 'datetime', minimumDate, onConfirm, onCancel }) {
+interface DatePickerProps {
+  visible: boolean;
+  date?: Date;
+  mode?: 'date' | 'time' | 'datetime';
+  minimumDate?: Date;
+  maximumDate?: Date;
+  includeTime?: boolean;
+  onConfirm?: (date: Date) => void;
+  onCancel?: () => void;
+}
+
+export default function DatePicker({
+  visible,
+  date,
+  mode = 'datetime',
+  minimumDate,
+  maximumDate,
+  includeTime = true,
+  onConfirm,
+  onCancel,
+}: DatePickerProps) {
   const [showYearSelector, setShowYearSelector] = useState(false);
   const [selectedDate, setSelectedDate] = useState(date ? new Date(date) : new Date());
   
@@ -28,22 +48,23 @@ export default function DatePicker({ visible, date, mode = 'datetime', minimumDa
   const onDateChange = (event, selectedValue) => {
     if (event.type === 'set' && selectedValue) {
       const newDate = new Date(selectedDate);
-      
-      if (mode === 'date') {
+      const actualMode = includeTime ? mode : mode === 'datetime' ? 'date' : mode;
+
+      if (actualMode === 'date') {
         newDate.setFullYear(selectedValue.getFullYear());
         newDate.setMonth(selectedValue.getMonth());
         newDate.setDate(selectedValue.getDate());
-      } else if (mode === 'time') {
+      } else if (actualMode === 'time') {
         newDate.setHours(selectedValue.getHours());
         newDate.setMinutes(selectedValue.getMinutes());
-      } else if (mode === 'datetime') {
+      } else if (actualMode === 'datetime') {
         newDate.setFullYear(selectedValue.getFullYear());
         newDate.setMonth(selectedValue.getMonth());
         newDate.setDate(selectedValue.getDate());
         newDate.setHours(selectedValue.getHours());
         newDate.setMinutes(selectedValue.getMinutes());
       }
-      
+
       setSelectedDate(newDate);
     }
   };
@@ -64,21 +85,33 @@ export default function DatePicker({ visible, date, mode = 'datetime', minimumDa
       <View style={styles.dateModalOverlay}>
         <View style={styles.dateModalContent}>
           <View style={styles.dateModalHeader}>
-            <Text style={styles.dateModalTitle}>Sélect. date & heure</Text>
-            <TouchableOpacity style={styles.dateModalCancelBtn} onPress={() => {
-              setShowDatePicker(false);
-              setShowYearSelector(false);
-              if (typeof onCancel === 'function') {
-                onCancel();
-              }
-            }}>
+            <Text style={styles.dateModalTitle}>
+              {mode === 'time'
+                ? 'Sélect. heure'
+                : includeTime && mode !== 'date'
+                ? 'Sélect. date & heure'
+                : 'Sélect. date'}
+            </Text>
+            <TouchableOpacity
+              style={styles.dateModalCancelBtn}
+              onPress={() => {
+                setShowYearSelector(false);
+                if (typeof onCancel === 'function') {
+                  onCancel();
+                }
+              }}
+            >
               <Text style={styles.dateModalCancelText}>Annuler</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.dateModalConfirmBtn} onPress={() => {
-              if (typeof onConfirm === 'function') {
-                onConfirm(selectedDate);
-              }
-            }}>
+            <TouchableOpacity
+              style={styles.dateModalConfirmBtn}
+              onPress={() => {
+                setShowYearSelector(false);
+                if (typeof onConfirm === 'function') {
+                  onConfirm(selectedDate);
+                }
+              }}
+            >
               <Text style={styles.dateModalConfirmText}>OK</Text>
             </TouchableOpacity>
           </View>
@@ -111,10 +144,11 @@ export default function DatePicker({ visible, date, mode = 'datetime', minimumDa
                 </TouchableOpacity>
                 <DateTimePicker
                   value={selectedDate}
-                  mode={mode}
+                  mode={includeTime ? mode : mode === 'datetime' ? 'date' : mode}
                   display="spinner"
                   onChange={onDateChange}
                   minimumDate={minimumDate || new Date(1900, 0, 1)}
+                  maximumDate={maximumDate}
                   textColor="#000000"
                   style={styles.datePickerSpinner}
                   themeVariant="light"
