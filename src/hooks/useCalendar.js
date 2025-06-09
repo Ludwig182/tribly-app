@@ -281,18 +281,66 @@ export const CalendarProvider = ({ children }) => {
   }, [eventsByDate]);
 
   // Fonctions de navigation
-  const navigateToNext = useCallback(() => {
+  const navigateToNextDay = useCallback(() => {
+    const nextDay = new Date(currentDate);
+    nextDay.setDate(currentDate.getDate() + 1);
+    setCurrentDate(nextDay);
+    setSelectedDate(nextDay); // Mettre à jour selectedDate aussi pour la vue jour
+  }, [currentDate, selectedDate]);
+
+  const navigateToPreviousDay = useCallback(() => {
+    const prevDay = new Date(currentDate);
+    prevDay.setDate(currentDate.getDate() - 1);
+    setCurrentDate(prevDay);
+    setSelectedDate(prevDay); // Mettre à jour selectedDate aussi pour la vue jour
+  }, [currentDate, selectedDate]);
+
+  const navigateToNextWeek = useCallback(() => {
+    const nextWeek = new Date(currentDate);
+    nextWeek.setDate(currentDate.getDate() + 7);
+    setCurrentDate(nextWeek);
+  }, [currentDate]);
+
+  const navigateToPreviousWeek = useCallback(() => {
+    const prevWeek = new Date(currentDate);
+    prevWeek.setDate(currentDate.getDate() - 7);
+    setCurrentDate(prevWeek);
+  }, [currentDate]);
+
+  const navigateToNextMonth = useCallback(() => {
     const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     setCurrentDate(nextMonth);
   }, [currentDate]);
 
-  const navigateToPrevious = useCallback(() => {
+  const navigateToPreviousMonth = useCallback(() => {
     const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
     setCurrentDate(prevMonth);
   }, [currentDate]);
 
+  const navigateToNext = useCallback(() => {
+    if (viewMode === 'day') {
+      navigateToNextDay();
+    } else if (viewMode === 'week') {
+      navigateToNextWeek();
+    } else {
+      navigateToNextMonth();
+    }
+  }, [viewMode, navigateToNextDay, navigateToNextWeek, navigateToNextMonth]);
+
+  const navigateToPrevious = useCallback(() => {
+    if (viewMode === 'day') {
+      navigateToPreviousDay();
+    } else if (viewMode === 'week') {
+      navigateToPreviousWeek();
+    } else {
+      navigateToPreviousMonth();
+    }
+  }, [viewMode, navigateToPreviousDay, navigateToPreviousWeek, navigateToPreviousMonth]);
+
   const navigateToToday = useCallback(() => {
-    setCurrentDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today); // Assurer que selectedDate est aussi aujourd'hui
   }, []);
 
   const createEvent = useCallback(async (eventData) => {
@@ -325,6 +373,12 @@ export const CalendarProvider = ({ children }) => {
     navigateToNext,
     navigateToPrevious,
     navigateToToday,
+    navigateToNextDay,
+    navigateToPreviousDay,
+    navigateToNextWeek,
+    navigateToPreviousWeek,
+    navigateToNextMonth,
+    navigateToPreviousMonth,
     addEvent,
     createEvent,
     updateEvent,

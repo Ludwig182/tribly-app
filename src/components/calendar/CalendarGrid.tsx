@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { CalendarEvent } from '../../types/calendar';
 import EventCard from './EventCard';
+import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import { useCalendar } from '../../hooks/useCalendar'; // Importer useCalendar
 
 type CalendarGridProps = {
   currentDate: Date;
@@ -10,7 +12,7 @@ type CalendarGridProps = {
   selectedDate?: Date | null;
   onDateSelect: (date: Date) => void;
   onEventSelect: (event: CalendarEvent) => void;
-  onEventCreate: () => void;
+  onEventCreate: (dateWithTime?: Date) => void;
 };
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -19,9 +21,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   selectedDate,
   onDateSelect,
   onEventSelect,
-  onEventCreate
+  onEventCreate,
 }) => {
   const theme = useTheme();
+  const { navigateToNextMonth, navigateToPreviousMonth } = useCalendar(); // Utiliser les fonctions de navigation
+  const [calendarDays, setCalendarDays] = useState<any[]>([]); // Renommé en calendarDays et type any[] pour correspondre à la structure
   const { width } = Dimensions.get('window');
   const cellWidth = (width - 40) / 7; // 40 pour les marges
 
@@ -36,13 +40,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const daysInMonth = lastDayOfMonth.getDate();
   const totalCells = Math.ceil((daysInMonth + startingDayOfWeek) / 7) * 7;
   
-  const days = [];
-  
   // Jours du mois précédent
   const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 0);
+  const tempDays = []; // Utiliser un tableau temporaire
   for (let i = startingDayOfWeek - 1; i >= 0; i--) {
     const day = prevMonth.getDate() - i;
-    days.push({
+    tempDays.push({
       date: new Date(prevMonth.getFullYear(), prevMonth.getMonth(), day),
       isCurrentMonth: false,
       day: day
@@ -51,7 +54,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   
   // Jours du mois actuel
   for (let day = 1; day <= daysInMonth; day++) {
-    days.push({
+    tempDays.push({
       date: new Date(currentDate.getFullYear(), currentDate.getMonth(), day),
       isCurrentMonth: true,
       day: day
@@ -59,15 +62,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
   
   // Jours du mois suivant
-  const remainingCells = totalCells - days.length;
+  const remainingCells = totalCells - tempDays.length;
   for (let day = 1; day <= remainingCells; day++) {
     const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day);
-    days.push({
+    tempDays.push({
       date: nextMonth,
       isCurrentMonth: false,
       day: day
     });
   }
+  // Mettre à jour l'état une fois que tous les jours sont calculés
+  React.useEffect(() => {
+    setCalendarDays(tempDays);
+  }, [currentDate]); // Recalculer si currentDate change
 
   const getEventsForDate = (date: Date) => {
     return events.filter(event => {
@@ -166,70 +173,83 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     },
   });
 
+  const onSwipe = (event: any) => {
+    if (event.nativeEvent.translationX < -50) { // Swipe vers la gauche
+      navigateToNextMonth();
+    }
+    if (event.nativeEvent.translationX > 50) { // Swipe vers la droite
+      navigateToPreviousMonth();
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {/* En-tête des jours de la semaine */}
-      <View style={styles.weekHeader}>
-        {weekDays.map((day, index) => (
-          <View key={index} style={styles.weekDay}>
-            <Text style={styles.weekDayText}>{day}</Text>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PanGestureHandler onEnded={onSwipe}>
+        <View style={styles.container}>
+          {/* En-tête des jours de la semaine */}
+          <View style={styles.weekHeader}>
+            {weekDays.map((day, index) => (
+              <View key={index} style={styles.weekDay}>
+                <Text style={styles.weekDayText}>{day}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
 
-      {/* Grille du calendrier */}
-      <View style={styles.grid}>
-        {days.map((dayInfo, index) => {
-          const dayEvents = getEventsForDate(dayInfo.date);
-          const isTodayDate = isToday(dayInfo.date);
-          const isSelectedDate = isSelected(dayInfo.date);
+          {/* Grille du calendrier */}
+          <View style={styles.grid}>
+            {calendarDays.map((dayInfo, index) => {
+              const dayEvents = getEventsForDate(dayInfo.date);
+              const isTodayDate = isToday(dayInfo.date);
+              const isSelectedDate = isSelected(dayInfo.date);
 
-          return (
-            <View key={index} style={styles.dayCell}>
-              <TouchableOpacity
-                style={[
-                  styles.dayButton,
-                  isTodayDate && styles.todayButton,
-                  isSelectedDate && styles.selectedButton,
-                ]}
-                onPress={() => onDateSelect(dayInfo.date)}
-              >
-                <Text
-                  style={[
-                    styles.dayText,
-                    dayInfo.isCurrentMonth ? styles.currentMonthDay : styles.otherMonthDay,
-                    isTodayDate && styles.todayText,
-                    isSelectedDate && styles.selectedText,
-                  ]}
-                >
-                  {dayInfo.day}
-                </Text>
-              </TouchableOpacity>
+              return (
+                <View key={index} style={styles.dayCell}>
+                  <TouchableOpacity
+                    style={[
+                      styles.dayButton,
+                      isTodayDate && styles.todayButton,
+                      isSelectedDate && styles.selectedButton,
+                    ]}
+                    onPress={() => onDateSelect(dayInfo.date)}
+                  >
+                    <Text
+                      style={[
+                        styles.dayText,
+                        dayInfo.isCurrentMonth ? styles.currentMonthDay : styles.otherMonthDay,
+                        isTodayDate && styles.todayText,
+                        isSelectedDate && styles.selectedText,
+                      ]}
+                    >
+                      {dayInfo.day}
+                    </Text>
+                  </TouchableOpacity>
 
-              {/* Indicateurs d'événements */}
-              <View style={styles.eventsContainer}>
-                {dayEvents.length > 0 && (
-                  <View style={styles.eventDotsRow}>
-                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                      <View
-                        key={eventIndex}
-                        style={[
-                          styles.eventDot,
-                          { backgroundColor: event.color || theme.colors.primary }
-                        ]}
-                      />
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <Text style={{ fontSize: 8, color: theme.colors.textSecondary }}>+{dayEvents.length - 3}</Text>
+                  {/* Indicateurs d'événements */}
+                  <View style={styles.eventsContainer}>
+                    {dayEvents.length > 0 && (
+                      <View style={styles.eventDotsRow}>
+                        {dayEvents.slice(0, 3).map((event, eventIndex) => (
+                          <View
+                            key={eventIndex}
+                            style={[
+                              styles.eventDot,
+                              { backgroundColor: event.color || theme.colors.primary }
+                            ]}
+                          />
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <Text style={{ fontSize: 8, color: theme.colors.textSecondary }}>+{dayEvents.length - 3}</Text>
+                        )}
+                      </View>
                     )}
                   </View>
-                )}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-    </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 };
 

@@ -21,6 +21,7 @@ type EventModalProps = {
   visible: boolean;
   event?: CalendarEvent;
   selectedDate?: Date;
+  eventCreationDate?: Date;
   familyMembers: FamilyMember[];
   onSave: (event: Partial<CalendarEvent>) => void;
   onDelete?: (eventId: string) => void;
@@ -31,6 +32,7 @@ const EventModal: React.FC<EventModalProps> = ({
   visible,
   event,
   selectedDate,
+  eventCreationDate,
   familyMembers,
   onSave,
   onDelete,
@@ -94,6 +96,8 @@ const EventModal: React.FC<EventModalProps> = ({
   ];
 
   useEffect(() => {
+    const dateToUse = eventCreationDate || selectedDate;
+    console.log('📝 EventModal - selectedDate reçue:', selectedDate?.toISOString(), 'eventCreationDate:', eventCreationDate?.toISOString(), 'visible:', visible);
     if (event) {
       // Load existing event data
       setTitle(event.title);
@@ -111,23 +115,21 @@ const EventModal: React.FC<EventModalProps> = ({
       setReminders(event.reminders || []);
     } else {
       // Reset form for new event
-      resetForm();
-      if (selectedDate) {
-        setStartDate(selectedDate);
-        setEndDate(new Date(selectedDate.getTime() + 60 * 60 * 1000)); // +1 hour
-      }
+      resetForm(dateToUse);
     }
-  }, [event, selectedDate, visible]);
+  }, [event, selectedDate, eventCreationDate, visible]);
 
-  const resetForm = () => {
+  const resetForm = (defaultDate?: Date) => {
+    const baseDate = defaultDate || new Date();
+    console.log('🔄 resetForm - defaultDate:', defaultDate?.toISOString(), 'baseDate utilisée:', baseDate.toISOString());
     setTitle('');
     setDescription('');
     setLocation('');
     setType('personal');
     setPriority('medium');
     setIsAllDay(false);
-    setStartDate(new Date());
-    setEndDate(new Date());
+    setStartDate(baseDate);
+    setEndDate(new Date(baseDate.getTime() + 60 * 60 * 1000)); // +1 hour
     setAssignedTo([]);
     setTribsReward('');
     setColor('');

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { CalendarEvent } from '../../types/calendar';
-import EventCard from './EventCard';
+import ModernEventCard from './ModernEventCard';
+import EventCounters from './EventCounters';
 
 type AgendaViewProps = {
   events: CalendarEvent[];
   onEventSelect: (event: CalendarEvent) => void;
-  onEventCreate: () => void;
+  onEventCreate: (dateWithTime?: Date) => void;
+  currentDate: Date;
 };
 
 type EventSection = {
@@ -19,10 +21,10 @@ type EventSection = {
 const AgendaView: React.FC<AgendaViewProps> = ({
   events,
   onEventSelect,
-  onEventCreate
+  onEventCreate,
+  currentDate
 }) => {
   const theme = useTheme();
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   // Grouper les événements par date
   const groupEventsByDate = (events: CalendarEvent[]): EventSection[] => {
@@ -79,51 +81,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   };
 
   // Filtrer les événements selon le filtre sélectionné
-  const getFilteredEvents = (): CalendarEvent[] => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    switch (selectedFilter) {
-      case 'today':
-        return events.filter(event => {
-          const eventDate = new Date(event.startDate);
-          return eventDate.toDateString() === today.toDateString();
-        });
-      
-      case 'week':
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        
-        return events.filter(event => {
-          const eventDate = new Date(event.startDate);
-          return eventDate >= weekStart && eventDate <= weekEnd;
-        });
-      
-      case 'month':
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
-        return events.filter(event => {
-          const eventDate = new Date(event.startDate);
-          return eventDate >= monthStart && eventDate <= monthEnd;
-        });
-      
-      default:
-        return events;
-    }
-  };
-
-  const filteredEvents = getFilteredEvents();
-  const eventSections = groupEventsByDate(filteredEvents);
-
-  const filters = [
-    { key: 'all', label: 'Tous' },
-    { key: 'today', label: "Aujourd'hui" },
-    { key: 'week', label: 'Cette semaine' },
-    { key: 'month', label: 'Ce mois' },
-  ] as const;
+  const eventSections = groupEventsByDate(events);
 
   const renderSectionHeader = ({ section }: { section: EventSection }) => (
     <View style={styles.sectionHeader}>
@@ -133,12 +91,10 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   );
 
   const renderEventItem = ({ item }: { item: CalendarEvent }) => (
-    <EventCard
+    <ModernEventCard
       event={item}
-      viewMode="detailed"
       onEdit={() => onEventSelect(item)}
       onComplete={() => {/* TODO: Implement complete */}}
-      onDelete={() => {/* TODO: Implement delete */}}
     />
   );
 
@@ -146,10 +102,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyTitle}>Aucun événement</Text>
       <Text style={styles.emptySubtitle}>
-        {selectedFilter === 'all' 
-          ? "Vous n'avez aucun événement planifié"
-          : `Aucun événement pour ${filters.find(f => f.key === selectedFilter)?.label.toLowerCase()}`
-        }
+        Vous n'avez aucun événement planifié pour cette période
       </Text>
       <TouchableOpacity style={styles.addButton} onPress={onEventCreate}>
         <Text style={styles.addButtonText}>+ Ajouter un événement</Text>
@@ -160,43 +113,19 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    filterContainer: {
-      flexDirection: 'row',
-      paddingHorizontal: 20,
-      paddingVertical: 15,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    filterButton: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginRight: 10,
-      backgroundColor: theme.colors.backgroundSecondary,
-    },
-    filterButtonActive: {
-      backgroundColor: theme.colors.primary,
-    },
-    filterText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme.colors.text,
-    },
-    filterTextActive: {
-      color: theme.colors.background,
+      backgroundColor: '#F8F9FA',
     },
     listContainer: {
       flex: 1,
+      backgroundColor: 'transparent',
     },
     sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 20,
-      paddingVertical: 15,
-      backgroundColor: theme.colors.backgroundSecondary,
+      paddingVertical: 16,
+      backgroundColor: 'transparent',
+      marginTop: 8,
     },
     sectionTitle: {
       fontSize: 16,
@@ -243,77 +172,20 @@ const AgendaView: React.FC<AgendaViewProps> = ({
       fontSize: 16,
       fontWeight: '600',
     },
-    statsContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingVertical: 15,
-      backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
-    },
-    statItem: {
-      alignItems: 'center',
-    },
-    statNumber: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.primary,
-    },
-    statLabel: {
-      fontSize: 12,
-      color: theme.colors.textSecondary,
-      marginTop: 2,
-    },
+
   });
 
-  // Calculer les statistiques
-  const totalEvents = filteredEvents.length;
-  const todayEvents = events.filter(event => {
-    const eventDate = new Date(event.startDate);
-    const today = new Date();
-    return eventDate.toDateString() === today.toDateString();
-  }).length;
-  const completedEvents = filteredEvents.filter(event => event.status === 'completed').length;
+
+
+  const renderListHeader = () => (
+    <EventCounters 
+      events={events}
+      currentDate={currentDate}
+    />
+  );
 
   return (
     <View style={styles.container}>
-      {/* Filtres */}
-      <View style={styles.filterContainer}>
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.key}
-            style={[
-              styles.filterButton,
-              selectedFilter === filter.key && styles.filterButtonActive
-            ]}
-            onPress={() => setSelectedFilter(filter.key)}
-          >
-            <Text style={[
-              styles.filterText,
-              selectedFilter === filter.key && styles.filterTextActive
-            ]}>
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Statistiques */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{totalEvents}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{todayEvents}</Text>
-          <Text style={styles.statLabel}>Aujourd'hui</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{completedEvents}</Text>
-          <Text style={styles.statLabel}>Terminés</Text>
-        </View>
-      </View>
-
       {/* Liste des événements */}
       {eventSections.length > 0 ? (
         <SectionList
@@ -322,11 +194,15 @@ const AgendaView: React.FC<AgendaViewProps> = ({
           keyExtractor={(item) => item.id}
           renderItem={renderEventItem}
           renderSectionHeader={renderSectionHeader}
+          ListHeaderComponent={renderListHeader}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       ) : (
-        renderEmptyState()
+        <View style={styles.listContainer}>
+          {renderListHeader()}
+          {renderEmptyState()}
+        </View>
       )}
     </View>
   );

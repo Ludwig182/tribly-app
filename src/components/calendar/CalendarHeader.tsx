@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { ViewMode, CalendarFilters as CalendarFiltersType } from '../../types/calendar';
-import { FamilyMember } from '../../types/calendar';
-import CalendarFilters from './CalendarFilters';
+import { ViewMode } from '../../types/calendar';
 
 type CalendarHeaderProps = {
   viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  filters: CalendarFiltersType;
-  familyMembers: FamilyMember[];
-  onFiltersChange: (filters: CalendarFiltersType) => void;
   onNavigateNext: () => void;
   onNavigatePrevious: () => void;
   onNavigateToday: () => void;
@@ -24,17 +18,12 @@ type CalendarHeaderProps = {
 
 const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   viewMode,
-  onViewModeChange,
-  filters,
-  familyMembers,
-  onFiltersChange,
   onNavigateNext,
   onNavigatePrevious,
   onNavigateToday,
   currentDate
 }) => {
   const theme = useTheme();
-  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
 
   const formatCurrentDate = () => {
     const options: Intl.DateTimeFormatOptions = {
@@ -44,12 +33,47 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     return currentDate.toLocaleDateString('fr-FR', options);
   };
 
-  const viewModeOptions = [
-    { key: 'month', label: 'Mois' },
-    { key: 'week', label: 'Semaine' },
-    { key: 'day', label: 'Jour' },
-    { key: 'agenda', label: 'Agenda' }
-  ];
+  const formatDateForViewMode = () => {
+    switch (viewMode) {
+      case 'month':
+        return currentDate.toLocaleDateString('fr-FR', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+      case 'week':
+        // Calculer le début et la fin de la semaine
+        const startOfWeek = new Date(currentDate);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day;
+        startOfWeek.setDate(diff);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        
+        const startMonth = startOfWeek.toLocaleDateString('fr-FR', { month: 'short' });
+        const endMonth = endOfWeek.toLocaleDateString('fr-FR', { month: 'short' });
+        const year = currentDate.getFullYear();
+        
+        if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
+          return `${startOfWeek.getDate()}-${endOfWeek.getDate()} ${startMonth} ${year}`;
+        } else {
+          return `${startOfWeek.getDate()} ${startMonth} - ${endOfWeek.getDate()} ${endMonth} ${year}`;
+        }
+      case 'day':
+        return currentDate.toLocaleDateString('fr-FR', { 
+          weekday: 'long',
+          day: 'numeric', 
+          month: 'long',
+          year: 'numeric'
+        });
+      case 'agenda':
+        return '';
+      default:
+        return formatCurrentDate();
+    }
+  };
+
+
 
   const styles = StyleSheet.create({
     container: {
@@ -79,6 +103,11 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 16,
+    },
+    agendaContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     navButton: {
       padding: 8,
@@ -110,135 +139,48 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       fontWeight: '600',
       color: 'white',
     },
-    bottomRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    viewModeContainer: {
-      flexDirection: 'row',
-      backgroundColor: theme.colors.surface,
-      borderRadius: 8,
-      padding: 2,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    viewModeButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-      minHeight: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    viewModeButtonActive: {
-      backgroundColor: theme.colors.primary,
-    },
-    viewModeButtonText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme.colors.textSecondary,
-    },
-    viewModeButtonTextActive: {
-      color: 'white',
-    },
-    filtersButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 8,
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      gap: 6,
-      minHeight: 40,
-      justifyContent: 'center',
-    },
-    filtersButtonText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme.colors.text,
-    },
+
   });
 
   return (
     <>
       <View style={styles.container}>
         <View style={styles.topRow}>
-          <View style={styles.navigationContainer}>
-            <TouchableOpacity style={styles.navButton} onPress={onNavigatePrevious}>
-              <Text style={styles.navButtonText}>‹</Text>
-            </TouchableOpacity>
-            
-            <Text style={styles.currentDateText}>
-              {viewMode === 'month' ? 'Mois' : viewMode === 'week' ? 'Semaine' : viewMode === 'day' ? 'Jour' : 'Agenda'}
-            </Text>
-            
-            <TouchableOpacity style={styles.navButton} onPress={onNavigateNext}>
-              <Text style={styles.navButtonText}>›</Text>
-            </TouchableOpacity>
-          </View>
+          {viewMode === 'agenda' ? (
+            // Mode agenda : pas de navigation, juste le titre centré
+            <View style={styles.agendaContainer}>
+              <Text style={styles.currentDateText}>
+                {formatDateForViewMode()}
+              </Text>
+            </View>
+          ) : (
+            // Autres modes : navigation normale
+            <View style={styles.navigationContainer}>
+              <TouchableOpacity style={styles.navButton} onPress={onNavigatePrevious}>
+                <Text style={styles.navButtonText}>‹</Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.currentDateText}>
+                {formatDateForViewMode()}
+              </Text>
+              
+              <TouchableOpacity style={styles.navButton} onPress={onNavigateNext}>
+                <Text style={styles.navButtonText}>›</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           
-          <TouchableOpacity style={styles.todayButton} onPress={onNavigateToday}>
-            <Text style={styles.todayButtonText}>Aujourd'hui</Text>
-          </TouchableOpacity>
+          {viewMode !== 'agenda' && (
+            <TouchableOpacity style={styles.todayButton} onPress={onNavigateToday}>
+              <Text style={styles.todayButtonText}>Aujourd'hui</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* View Mode and Filters Row */}
-        <View style={styles.bottomRow}>
-          <View style={styles.viewModeContainer}>
-            {viewModeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.viewModeButton,
-                  viewMode === option.key && styles.viewModeButtonActive
-                ]}
-                onPress={() => onViewModeChange(option.key as ViewMode)}
-              >
-                <Text
-                  style={[
-                    styles.viewModeButtonText,
-                    viewMode === option.key && styles.viewModeButtonTextActive
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.filtersButton} 
-            onPress={() => setIsFiltersVisible(true)}
-          >
-            <Text style={styles.filtersButtonText}>🔍</Text>
-            <Text style={styles.filtersButtonText}>Filtres</Text>
-          </TouchableOpacity>
-        </View>
+
       </View>
 
-      {/* Filters Modal */}
-      <CalendarFilters
-        visible={isFiltersVisible}
-        filters={filters}
-        familyMembers={familyMembers}
-        onFiltersChange={onFiltersChange}
-        onClose={() => setIsFiltersVisible(false)}
-        onReset={() => {
-          onFiltersChange({
-            searchQuery: '',
-            eventTypes: [],
-            priorities: [],
-            assignedMembers: [],
-            dateRange: {},
-            showCompleted: true,
-            showOverdue: true,
-            hasTribs: false
-          });
-        }}
-      />
+
     </>
   );
 };

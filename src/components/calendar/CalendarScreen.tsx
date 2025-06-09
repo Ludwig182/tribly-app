@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, StatusBar, Text } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  Dimensions,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/useTheme';
@@ -10,8 +17,20 @@ import WeekView from './WeekView';
 import DayView from './DayView';
 import AgendaView from './AgendaView';
 import CalendarHeader from './CalendarHeader';
+import ViewModeSelector from './ViewModeSelector';
 import EventModal from './EventModal';
+import CalendarIcon from './CalendarIcon';
+import EventCounters from './EventCounters';
+import PeriodFilters, { PeriodFilter } from './PeriodFilters';
 import { CalendarEvent, ViewMode } from '../../types/calendar';
+
+const screenWidth = Dimensions.get('window').width;
+
+// Gradient adaptatif selon le thème
+const getHeaderGradient = (theme: any) => ({
+  light: theme.colors.headerGradient?.light || ['#FF6B6B', '#4ECDC4'],
+  dark: theme.colors.headerGradient?.dark || ['#2C3E50', '#3498DB']
+});
 
 type CalendarScreenProps = {
   initialViewMode?: ViewMode;
@@ -22,12 +41,34 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
 }) => {
   const theme = useTheme();
   const { familyData } = useFamily();
-  const {    currentDate,    selectedDate,    viewMode,    events,    filteredEvents,    filters,    isLoading,    error,    navigateToNext,    navigateToPrevious,    navigateToToday,    setCurrentDate,    selectDate,    setViewMode,    createEvent,    updateEvent,    deleteEvent,    completeEvent,    setFilters  } = useCalendar();
+  const {
+    currentDate,
+    selectedDate,
+    viewMode,
+    events,
+    filteredEvents,
+    filters,
+    isLoading,
+    error,
+    navigateNext,
+    navigatePrevious,
+    navigateToday,
+    setCurrentDate,
+    selectDate,
+    setViewMode,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    completeEvent,
+    setFilters
+  } = useCalendar();
   
   const familyMembers = familyData?.members || [];
 
   const [isEventModalVisible, setIsEventModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | undefined>();
+  const [eventCreationDate, setEventCreationDate] = useState<Date | undefined>();
+  const [selectedPeriodFilter, setSelectedPeriodFilter] = useState<PeriodFilter>('all');
 
   // Initialiser le viewMode avec la valeur du prop
   useEffect(() => {
@@ -41,8 +82,10 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
     setIsEventModalVisible(true);
   };
 
-  const handleEventCreate = () => {
+  const handleEventCreate = (dateWithTime?: Date) => {
+    console.log('📅 CalendarScreen - Date reçue:', dateWithTime?.toISOString(), 'Date utilisée:', (dateWithTime || currentDate).toISOString());
     setSelectedEvent(undefined);
+    setEventCreationDate(dateWithTime);
     setIsEventModalVisible(true);
   };
 
@@ -63,7 +106,39 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
   const handleEventCancel = () => {
     setIsEventModalVisible(false);
     setSelectedEvent(undefined);
+    setEventCreationDate(undefined);
   };
+
+  // Filtrer les événements selon la période sélectionnée
+  const getFilteredEventsByPeriod = (events: CalendarEvent[]): CalendarEvent[] => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (selectedPeriodFilter) {
+      case 'today':
+        return events.filter(event => {
+          const eventDate = new Date(event.startDate);
+          return eventDate.toDateString() === today.toDateString();
+        });
+      
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        return events.filter(event => {
+          const eventDate = new Date(event.startDate);
+          return eventDate >= weekStart && eventDate <= weekEnd;
+        });
+      
+      default: // 'all'
+        return events;
+    }
+  };
+
+  // Appliquer le filtre de période aux événements filtrés
+  const finalFilteredEvents = getFilteredEventsByPeriod(filteredEvents);
 
   const handleEventDelete = async (eventId: string) => {
     try {
@@ -81,7 +156,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
         return (
           <WeekView
             currentDate={currentDate}
-            events={filteredEvents}
+            events={finalFilteredEvents}
             onEventSelect={handleEventSelect}
             onDateSelect={selectDate}
             onEventCreate={handleEventCreate}
@@ -91,7 +166,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
         return (
           <DayView
             currentDate={selectedDate || currentDate}
-            events={filteredEvents}
+            events={finalFilteredEvents}
             onEventSelect={handleEventSelect}
             onEventCreate={handleEventCreate}
           />
@@ -99,16 +174,17 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
       case 'agenda':
         return (
           <AgendaView
-            events={filteredEvents}
+            events={finalFilteredEvents}
             onEventSelect={handleEventSelect}
             onEventCreate={handleEventCreate}
+            currentDate={currentDate}
           />
         );
       default:
         return (
           <CalendarGrid
             currentDate={currentDate}
-            events={filteredEvents}
+            events={finalFilteredEvents}
             selectedDate={selectedDate}
             onDateSelect={selectDate}
             onEventSelect={handleEventSelect}
@@ -123,13 +199,21 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    header: {
-      paddingBottom: 20,
+    headerContainer: {
       position: 'relative',
-      overflow: 'hidden',
-      minHeight: 120,
+      zIndex: 10,
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      marginBottom: 8,
+    },
+    header: {
+      minHeight: screenWidth < 375 ? 130 : 170,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
+      overflow: 'hidden',
     },
     headerPattern: {
       position: 'absolute',
@@ -137,6 +221,9 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
       left: 0,
       right: 0,
       bottom: 0,
+      overflow: 'hidden',
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
     },
     circle: {
       position: 'absolute',
@@ -163,91 +250,136 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
     },
     headerSafeAreaInternal: {
       flex: 1,
-      minHeight: 160,
+      minHeight: screenWidth < 375 ? 110 : 150,
+      justifyContent: 'center',
     },
     headerActualContent: {
       paddingHorizontal: 20,
-      paddingVertical: 8,
-      paddingTop: 4,
+      paddingVertical: screenWidth < 375 ? 12 : 16,
       zIndex: 12,
       position: 'relative',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    headerIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      backgroundColor: 'white',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    headerTextContainer: {
+      flex: 1,
     },
     headerTitle: {
-      fontSize: 24,
-      fontWeight: 'bold',
+      fontSize: screenWidth < 375 ? 20 : 24,
+      fontWeight: '600',
       color: 'white',
-      marginBottom: 5,
-      textAlign: 'center',
+      textAlign: 'left',
     },
     headerSubtitle: {
-      fontSize: 16,
+      fontSize: 14,
       color: 'rgba(255, 255, 255, 0.9)',
-      textAlign: 'center',
+      textAlign: 'left',
       textTransform: 'capitalize',
     },
     navigationSection: {
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.surface,
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
     content: {
-      flex: 1,
-    },
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+  },
   });
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerPattern}>
-          <View style={[styles.circle, styles.circle1]} />
-          <View style={[styles.circle, styles.circle2]} />
-          <View style={[styles.circle, styles.circle3]} />
-        </View>
-        <SafeAreaView style={styles.headerSafeAreaInternal}>
-          <View style={styles.headerActualContent}>
-            <Text style={styles.headerTitle}>📅 Calendrier Familial</Text>
-            <Text style={styles.headerSubtitle}>
-              {new Date().toLocaleDateString('fr-FR', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </Text>
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={getHeaderGradient(theme).light}
+          style={styles.header}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerPattern}>
+            <View style={[styles.circle, styles.circle1]} />
+            <View style={[styles.circle, styles.circle2]} />
+            <View style={[styles.circle, styles.circle3]} />
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+          <SafeAreaView style={styles.headerSafeAreaInternal}>
+            <View style={styles.headerActualContent}>
+              <View style={styles.headerIconContainer}>
+                <CalendarIcon size={24} color={theme.colors.primary} />
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Calendrier Familial</Text>
+                <Text style={styles.headerSubtitle}>
+                  {currentDate.toLocaleDateString('fr-FR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </View>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
       
-      <View style={styles.navigationSection}>
-        <CalendarHeader
+      {/* View Mode Selector - Fixed below header */}
+        <ViewModeSelector
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           filters={filters}
           familyMembers={familyMembers}
           onFiltersChange={setFilters}
-          onNavigateNext={navigateToNext}
-          onNavigatePrevious={navigateToPrevious}
-          onNavigateToday={navigateToToday}
-          currentDate={currentDate}
         />
-      </View>
+        
+        {/* Period Filters - Below view selector, only for agenda */}
+        {viewMode === 'agenda' && (
+          <PeriodFilters
+            selectedFilter={selectedPeriodFilter}
+            onFilterChange={setSelectedPeriodFilter}
+          />
+        )}
+        
+        {/* Date Navigation - Below period filters for month/week/day */}
+        {viewMode !== 'agenda' && (
+          <View style={styles.navigationSection}>
+            <CalendarHeader
+              viewMode={viewMode}
+              onNavigateNext={navigateNext}
+              onNavigatePrevious={navigatePrevious}
+              onNavigateToday={navigateToday}
+              currentDate={currentDate}
+            />
+          </View>
+        )}
+      
+
       
       <View style={styles.content}>
         {renderCalendarView()}
       </View>
 
       <EventModal
+        key={eventCreationDate?.getTime() || selectedDate?.getTime() || 'default'}
         visible={isEventModalVisible}
         event={selectedEvent}
-        selectedDate={selectedDate}
+        selectedDate={eventCreationDate || selectedDate}
         familyMembers={familyMembers}
         onSave={handleEventSave}
         onDelete={handleEventDelete}
