@@ -1,5 +1,5 @@
 // src/components/tasks/AddTaskModal.tsx - Création de tâches
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DatePicker from '../calendar/DatePicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
@@ -145,12 +145,13 @@ export default function AddTaskModal({ visible, onClose, onSuccess }: AddTaskMod
   };
 
   // 📅 Gestion du DatePicker
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateConfirm = (selectedDate: Date) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      // Permettre la date du jour et futures
-      setDueDate(selectedDate);
-    }
+    setDueDate(selectedDate);
+  };
+
+  const handleDateCancel = () => {
+    setShowDatePicker(false);
   };
 
   // 📅 Ouvrir le DatePicker directement
@@ -454,12 +455,14 @@ export default function AddTaskModal({ visible, onClose, onSuccess }: AddTaskMod
 
           {/* DatePicker Modal */}
           {showDatePicker && (
-            <DateTimePicker
-              value={dueDate || new Date()}
+            <DatePicker
+              visible={showDatePicker}
+              date={dueDate || new Date()}
               mode="date"
-              display="default"
-              onChange={handleDateChange}
-              // Pas de minimumDate - permet de choisir aujourd'hui
+              minimumDate={new Date()}
+              includeTime={false}
+              onConfirm={handleDateConfirm}
+              onCancel={handleDateCancel}
             />
           )}
         </SafeAreaView>

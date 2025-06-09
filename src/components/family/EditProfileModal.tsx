@@ -16,7 +16,7 @@ import {
   ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DatePicker from '../calendar/DatePicker';
 import * as ImagePicker from 'expo-image-picker';
 import { storageService } from '../../services/storageService';
 import { familyService } from '../../services/familyService';
@@ -208,25 +208,27 @@ export default function EditProfileModal({
   };
 
   // 📅 Gestion DatePicker
-  const onDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateConfirm = (selectedDate: Date) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      // Vérifier que la date n'est pas dans le futur
-      const today = new Date();
-      if (selectedDate > today) {
-        Alert.alert('❌ Date invalide', 'La date de naissance ne peut pas être dans le futur.');
-        return;
-      }
-      
-      // Vérifier un âge raisonnable (0-120 ans)
-      const age = calculateAge(selectedDate);
-      if (age > 120) {
-        Alert.alert('❌ Date invalide', 'Veuillez saisir une date de naissance valide.');
-        return;
-      }
-      
-      setNewBirthDate(selectedDate);
+    // Vérifier que la date n'est pas dans le futur
+    const today = new Date();
+    if (selectedDate > today) {
+      Alert.alert('❌ Date invalide', 'La date de naissance ne peut pas être dans le futur.');
+      return;
     }
+
+    // Vérifier un âge raisonnable (0-120 ans)
+    const age = calculateAge(selectedDate);
+    if (age > 120) {
+      Alert.alert('❌ Date invalide', 'Veuillez saisir une date de naissance valide.');
+      return;
+    }
+
+    setNewBirthDate(selectedDate);
+  };
+
+  const handleDateCancel = () => {
+    setShowDatePicker(false);
   };
 
   // 🛡️ Validation des données
@@ -564,50 +566,18 @@ export default function EditProfileModal({
           </ScrollView>
 
           {/* DatePicker Modal */}
-          {/* DatePicker Modal - Version corrigée */}
           {showDatePicker && (
-          <Modal
-            visible={showDatePicker}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowDatePicker(false)}
-          >
-            <View style={styles.dateModalOverlay}>
-              <View style={styles.dateModalContent}>
-                <View style={styles.dateModalHeader}>
-                  <TouchableOpacity
-                    style={styles.dateModalCancelBtn}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={styles.dateModalCancelText}>Annuler</Text>
-                  </TouchableOpacity>
-                  
-                  <Text style={styles.dateModalTitle}>Date de naissance</Text>
-                  
-                  <TouchableOpacity
-                    style={styles.dateModalConfirmBtn}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={styles.dateModalConfirmText}>OK</Text>
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.datePickerContainer}>
-                  <DateTimePicker
-                    value={newBirthDate || new Date()}
-                    mode="date"
-                    display="spinner"
-                    onChange={onDateChange}
-                    maximumDate={new Date()}
-                    minimumDate={new Date(1900, 0, 1)}
-                    textColor="#000000"
-                    style={styles.datePickerSpinner}
-                  />
-                </View>
-              </View>
-            </View>
-          </Modal>
-        )}
+            <DatePicker
+              visible={showDatePicker}
+              date={newBirthDate || new Date()}
+              mode="date"
+              includeTime={false}
+              maximumDate={new Date()}
+              minimumDate={new Date(1900, 0, 1)}
+              onConfirm={handleDateConfirm}
+              onCancel={handleDateCancel}
+            />
+          )}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
