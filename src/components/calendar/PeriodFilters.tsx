@@ -25,7 +25,7 @@ const PeriodFilters: React.FC<PeriodFiltersProps> = ({
     container: {
       flexDirection: 'row',
       backgroundColor: '#FFFFFF',
-      borderWidth: 1,
+      borderWidth: 0,
       borderColor: '#E7EAF0',
       borderRadius: 18,
       paddingVertical: 4,
@@ -34,6 +34,13 @@ const PeriodFilters: React.FC<PeriodFiltersProps> = ({
       marginVertical: 8,
       justifyContent: 'space-between',
       gap: 16,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
     },
     filterButton: {
       paddingHorizontal: 2,

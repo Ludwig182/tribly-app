@@ -26,18 +26,25 @@ const AgendaView: React.FC<AgendaViewProps> = ({
 }) => {
   const theme = useTheme();
 
-  // Grouper les événements par date
+  // Grouper les événements par date (en excluant les événements passés)
   const groupEventsByDate = (events: CalendarEvent[]): EventSection[] => {
     const grouped: { [key: string]: CalendarEvent[] } = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Début de la journée actuelle
     
     events.forEach(event => {
       const eventDate = new Date(event.startDate);
-      const dateKey = eventDate.toDateString();
+      eventDate.setHours(0, 0, 0, 0); // Normaliser à minuit pour la comparaison
       
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
+      // Exclure les événements qui ont commencé avant aujourd'hui
+      if (eventDate >= today) {
+        const dateKey = eventDate.toDateString();
+        
+        if (!grouped[dateKey]) {
+          grouped[dateKey] = [];
+        }
+        grouped[dateKey].push(event);
       }
-      grouped[dateKey].push(event);
     });
 
     // Convertir en sections et trier par date

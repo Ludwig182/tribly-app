@@ -11,15 +11,25 @@ type EventCountersProps = {
 const EventCounters: React.FC<EventCountersProps> = ({ events, currentDate }) => {
   const theme = useTheme();
 
-  // Calculer les compteurs
-  const totalEvents = events.length;
+  // Filtrer les événements passés
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
-  const todayEvents = events.filter(event => {
+  const futureEvents = events.filter(event => {
+    const eventDate = new Date(event.startDate);
+    eventDate.setHours(0, 0, 0, 0); // Normaliser à minuit pour la comparaison
+    return eventDate >= today;
+  });
+  
+  // Calculer les compteurs (uniquement pour les événements futurs)
+  const totalEvents = futureEvents.length;
+  
+  const todayEvents = futureEvents.filter(event => {
     const eventDate = new Date(event.startDate);
     return eventDate.toDateString() === currentDate.toDateString();
   }).length;
   
-  const completedEvents = events.filter(event => 
+  const completedEvents = futureEvents.filter(event => 
     event.status === 'completed'
   ).length;
 
@@ -28,18 +38,11 @@ const EventCounters: React.FC<EventCountersProps> = ({ events, currentDate }) =>
       flexDirection: 'row',
       justifyContent: 'space-around',
       paddingVertical: 16,
-      paddingHorizontal: 20,
+      paddingHorizontal: 0,
       backgroundColor: '#F8F9FA',
       borderRadius: 16,
       marginHorizontal: 20,
       marginVertical: 12,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
       elevation: 3,
     },
     counterItem: {

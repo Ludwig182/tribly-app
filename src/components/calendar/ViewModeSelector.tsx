@@ -38,7 +38,7 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: theme.colors.background,
+      backgroundColor:'#f8f9fa',
       paddingHorizontal: 16,
       paddingVertical: 12,
     },
@@ -47,8 +47,15 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: 8,
-      backgroundColor: '#F5F5F5',
+      backgroundColor: '#FFF',
       borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
     },
     tabsGroup: {
       flexDirection: 'row',
@@ -61,7 +68,7 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
          borderRadius: 12,
          alignItems: 'center',
          justifyContent: 'center',
-         backgroundColor: 'transparent',
+         backgroundColor: '#f3f4f6',
          flex: 1,
        },
     tabActive: {

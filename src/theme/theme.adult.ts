@@ -37,7 +37,7 @@ const adultTheme: Theme = {
     success: '#4CAF50', // Couleur de succès
     warning: '#FF9800', // Couleur d'avertissement
     error: '#F44336', // Couleur d'erreur
-    surface: '#F5F5F5', // Couleur de surface pour les éléments UI
+    surface: '#f8f9fa', // Couleur de surface pour les éléments UI
   },
   layout: {
     headerHeightCalendar: 'clamp(200px, 30vh, 260px)', // Hauteur responsive pour le header calendrier

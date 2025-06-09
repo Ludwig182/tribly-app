@@ -197,7 +197,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.surface,
     },
     headerContainer: {
       position: 'relative',
@@ -233,19 +233,19 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
     circle1: {
       width: 100,
       height: 100,
-      top: -30,
+      top: 80,
       right: -20,
     },
     circle2: {
       width: 60,
       height: 60,
-      top: 40,
+      top: 30,
       right: 80,
     },
     circle3: {
       width: 80,
       height: 80,
-      top: -10,
+      top: 10,
       left: -25,
     },
     headerSafeAreaInternal: {
