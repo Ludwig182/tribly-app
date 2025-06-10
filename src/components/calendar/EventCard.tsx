@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { CalendarEvent, FamilyMember } from '../../types/calendar';
+import { useFamily } from '../../hooks/useFamily';
+import { Image } from 'react-native';
 
 type EventCardProps = {
   event: CalendarEvent;
@@ -21,6 +23,7 @@ const EventCard: React.FC<EventCardProps> = ({
   currentUser
 }) => {
   const theme = useTheme();
+  const { familyMembers } = useFamily();
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('fr-FR', { 
@@ -42,39 +45,13 @@ const EventCard: React.FC<EventCardProps> = ({
     return `${minutes}min`;
   };
 
-  const getEventTypeIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      personal: '👤',
-      family: '👨‍👩‍👧‍👦',
-      chore: '🧹',
-      appointment: '🏥',
-      school: '🎓',
-      leisure: '🎉',
-      sport: '⚽',
-      reminder: '⏰'
-    };
-    return icons[type] || '📅';
-  };
+  // getEventTypeIcon supprimé - remplacé par les avatars des membres
 
-  const getEventTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      personal: theme.colors.primary,
-      family: '#4CAF50',
-      chore: '#FF9800',
-      appointment: '#2196F3',
-      school: '#9C27B0',
-      leisure: '#E91E63',
-      sport: '#FF5722',
-      reminder: '#607D8B'
-    };
-    return colors[type] || theme.colors.primary;
-  };
+  // getEventTypeColor supprimé - plus de catégories
 
   const getPriorityColor = (priority: string) => {
     const colors: { [key: string]: string } = {
-      low: theme.colors.success,
-      medium: theme.colors.warning,
-      high: theme.colors.error,
+      normal: theme.colors.textSecondary,
       urgent: '#D32F2F'
     };
     return colors[priority] || theme.colors.textSecondary;
@@ -82,7 +59,23 @@ const EventCard: React.FC<EventCardProps> = ({
 
   const isCompleted = event.status === 'completed';
   const isOverdue = new Date(event.startDate) < new Date() && !isCompleted;
-  const eventColor = event.color || getEventTypeColor(event.type);
+  // Fonction pour calculer la couleur dynamiquement basée sur les assignés
+  const getEventColor = () => {
+    if (!event.assignees || event.assignees.length === 0) {
+      return theme.colors.primary; // Couleur par défaut si aucun assigné
+    }
+    
+    if (event.assignees.length === 1) {
+      // Un seul assigné : utiliser sa couleur
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      return member?.color || theme.colors.primary;
+    }
+    
+    // Plusieurs assignés : utiliser une couleur neutre (gris-bleu)
+    return '#6B7280'; // Gris-bleu pour différencier les événements multi-assignés
+  };
+  
+  const eventColor = getEventColor();
 
   const renderCompactView = () => (
     <TouchableOpacity
@@ -94,7 +87,25 @@ const EventCard: React.FC<EventCardProps> = ({
       onPress={() => onEdit(event)}
     >
       <View style={styles.compactHeader}>
-        <Text style={styles.eventIcon}>{getEventTypeIcon(event.type)}</Text>
+        {/* Avatars des membres assignés */}
+        {event.assignees && event.assignees.length > 0 ? (
+          event.assignees.slice(0, 1).map((assigneeId) => {
+            const member = familyMembers?.find(m => m.id === assigneeId);
+            if (!member) return <Text key={assigneeId} style={styles.eventIcon}>📅</Text>;
+            
+            return member.avatarUrl ? (
+              <Image 
+                key={assigneeId}
+                source={{ uri: member.avatarUrl }} 
+                style={styles.memberAvatar}
+              />
+            ) : (
+              <Text key={assigneeId} style={styles.eventIcon}>{member.avatar}</Text>
+            );
+          })
+        ) : (
+          <Text style={styles.eventIcon}>📅</Text>
+        )}
         <View style={styles.compactContent}>
           <Text style={[
             styles.compactTitle,
@@ -128,7 +139,25 @@ const EventCard: React.FC<EventCardProps> = ({
     >
       <View style={styles.detailedHeader}>
         <View style={styles.titleRow}>
-          <Text style={styles.eventIcon}>{getEventTypeIcon(event.type)}</Text>
+          {/* Avatars des membres assignés */}
+        {event.assignees && event.assignees.length > 0 ? (
+          event.assignees.slice(0, 1).map((assigneeId) => {
+            const member = familyMembers?.find(m => m.id === assigneeId);
+            if (!member) return <Text key={assigneeId} style={styles.eventIcon}>📅</Text>;
+            
+            return member.avatarUrl ? (
+              <Image 
+                key={assigneeId}
+                source={{ uri: member.avatarUrl }} 
+                style={styles.memberAvatar}
+              />
+            ) : (
+              <Text key={assigneeId} style={styles.eventIcon}>{member.avatar}</Text>
+            );
+          })
+        ) : (
+          <Text style={styles.eventIcon}>📅</Text>
+        )}
           <Text style={[
             styles.detailedTitle,
             isCompleted && styles.completedText
@@ -237,7 +266,25 @@ const EventCard: React.FC<EventCardProps> = ({
         onPress={() => onEdit(event)}
       >
         <View style={styles.timelineHeader}>
-          <Text style={styles.eventIcon}>{getEventTypeIcon(event.type)}</Text>
+          {/* Avatars des membres assignés */}
+        {event.assignees && event.assignees.length > 0 ? (
+          event.assignees.slice(0, 1).map((assigneeId) => {
+            const member = familyMembers?.find(m => m.id === assigneeId);
+            if (!member) return <Text key={assigneeId} style={styles.eventIcon}>📅</Text>;
+            
+            return member.avatarUrl ? (
+              <Image 
+                key={assigneeId}
+                source={{ uri: member.avatarUrl }} 
+                style={styles.memberAvatar}
+              />
+            ) : (
+              <Text key={assigneeId} style={styles.eventIcon}>{member.avatar}</Text>
+            );
+          })
+        ) : (
+          <Text style={styles.eventIcon}>📅</Text>
+        )}
           <Text style={[
             styles.timelineTitle,
             isCompleted && styles.completedText
@@ -422,6 +469,12 @@ const EventCard: React.FC<EventCardProps> = ({
     // Common Styles
     eventIcon: {
       fontSize: 16,
+    },
+    memberAvatar: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      marginRight: 8,
     },
     priorityDot: {
       width: 8,

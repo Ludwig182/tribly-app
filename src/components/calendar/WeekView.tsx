@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { CalendarEvent } from '../../types/calendar';
+import { CalendarEvent, FamilyMember } from '../../types/calendar';
 import EventCard from './EventCard';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import { useCalendar } from '../../hooks/useCalendar';
@@ -12,6 +12,7 @@ type WeekViewProps = {
   onEventSelect: (event: CalendarEvent) => void;
   onDateSelect: (date: Date) => void;
   onEventCreate: (dateWithTime?: Date) => void;
+  familyMembers: FamilyMember[];
 };
 
 const WeekView: React.FC<WeekViewProps> = ({
@@ -19,10 +20,27 @@ const WeekView: React.FC<WeekViewProps> = ({
   events,
   onEventSelect,
   onDateSelect,
-  onEventCreate
+  onEventCreate,
+  familyMembers
 }) => {
   const theme = useTheme();
   const { navigateToNextWeek, navigateToPreviousWeek } = useCalendar();
+  
+  // Fonction pour calculer la couleur dynamiquement basée sur les assignés
+  const getEventColor = (event: CalendarEvent) => {
+    if (!event.assignees || event.assignees.length === 0) {
+      return theme.colors.primary; // Couleur par défaut si aucun assigné
+    }
+    
+    if (event.assignees.length === 1) {
+      // Un seul assigné : utiliser sa couleur
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      return member?.color || theme.colors.primary;
+    }
+    
+    // Plusieurs assignés : utiliser une couleur neutre (gris-bleu)
+    return '#6B7280'; // Gris-bleu pour différencier les événements multi-assignés
+  };
   const { width } = Dimensions.get('window');
   const dayWidth = (width - 60) / 7; // 60 pour la colonne des heures
 
@@ -504,7 +522,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                               style={[
                                 styles.absoluteEventContainer,
                                 {
-                                  backgroundColor: event.color || theme.colors.primary,
+                                  backgroundColor: getEventColor(event),
                                   height: eventHeight,
                                   top: topPosition,
                                   width: layout.width,

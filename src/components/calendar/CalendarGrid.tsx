@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { CalendarEvent } from '../../types/calendar';
+import { CalendarEvent, FamilyMember } from '../../types/calendar';
 import EventCard from './EventCard';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import { useCalendar } from '../../hooks/useCalendar'; // Importer useCalendar
@@ -13,6 +13,7 @@ type CalendarGridProps = {
   onDateSelect: (date: Date) => void;
   onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (dateWithTime?: Date) => void;
+  familyMembers: FamilyMember[];
 };
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -22,9 +23,26 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onDateSelect,
   onEventSelect,
   onEventCreate,
+  familyMembers
 }) => {
   const theme = useTheme();
   const { navigateToNextMonth, navigateToPreviousMonth } = useCalendar(); // Utiliser les fonctions de navigation
+  
+  // Fonction pour calculer la couleur dynamiquement basée sur les assignés
+  const getEventColor = (event: CalendarEvent) => {
+    if (!event.assignees || event.assignees.length === 0) {
+      return theme.colors.primary; // Couleur par défaut si aucun assigné
+    }
+    
+    if (event.assignees.length === 1) {
+      // Un seul assigné : utiliser sa couleur
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      return member?.color || theme.colors.primary;
+    }
+    
+    // Plusieurs assignés : utiliser une couleur neutre (gris-bleu)
+    return '#6B7280'; // Gris-bleu pour différencier les événements multi-assignés
+  };
   const [calendarDays, setCalendarDays] = useState<any[]>([]); // Renommé en calendarDays et type any[] pour correspondre à la structure
   const { width } = Dimensions.get('window');
   const cellWidth = (width - 40) / 7; // 40 pour les marges
@@ -233,7 +251,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             key={eventIndex}
                             style={[
                               styles.eventDot,
-                              { backgroundColor: event.color || theme.colors.primary }
+                              { backgroundColor: getEventColor(event) }
                             ]}
                           />
                         ))}

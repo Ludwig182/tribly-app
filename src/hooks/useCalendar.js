@@ -34,7 +34,7 @@ export const CalendarProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     searchQuery: '',
-    eventTypes: [],
+    // eventTypes: [], // Supprimé - plus de catégories
     priorities: [],
     assignedMembers: [],
     dateRange: { start: null, end: null },
@@ -130,13 +130,7 @@ export const CalendarProvider = ({ children }) => {
       console.log('[useCalendar] After search query filter:', JSON.parse(JSON.stringify(filtered)));
     }
     
-    // Filtre par type d'événement
-    if (filters.eventTypes.length > 0) {
-      filtered = filtered.filter(event => 
-        filters.eventTypes.includes(event.type)
-      );
-      console.log('[useCalendar] After event types filter:', JSON.parse(JSON.stringify(filtered)));
-    }
+    // Filtrage par type supprimé - plus de catégories
     
     // Filtre par priorité
     if (filters.priorities.length > 0) {

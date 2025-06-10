@@ -148,7 +148,7 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
         onReset={() => {
           onFiltersChange({
             searchQuery: '',
-            eventTypes: [],
+            // eventTypes: [], // Supprimé - plus de catégories
             priorities: [],
             assignedMembers: [],
             dateRange: {},

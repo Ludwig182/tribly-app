@@ -1,7 +1,7 @@
 // src/types/calendar.ts
 import { Timestamp } from 'firebase/firestore';
 
-export type EventType = 'family' | 'personal' | 'reminder' | 'task' | 'appointment';
+export type EventPriority = 'normal' | 'urgent';
 export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface EventRecurrence {
@@ -22,7 +22,8 @@ export interface CalendarEvent {
   startDate: Date | Timestamp;
   endDate?: Date | Timestamp;
   allDay: boolean;
-  type: EventType;
+  // type: EventType; // Supprimé - plus de catégories
+  priority?: EventPriority; // Priorité de l'événement
   createdBy: string;      // ID du membre qui a créé l'événement
   assignees?: string[];   // IDs des membres assignés à l'événement
   color?: string;         // Couleur de l'événement

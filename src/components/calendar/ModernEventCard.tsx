@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { CalendarEvent, FamilyMember } from '../../types/calendar';
+import { useFamily } from '../../hooks/useFamily';
+import { Image } from 'react-native';
 
 type ModernEventCardProps = {
   event: CalendarEvent;
@@ -19,6 +21,7 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
   compact = false
 }) => {
   const theme = useTheme();
+  const { familyMembers } = useFamily();
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('fr-FR', { 
@@ -27,39 +30,13 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
     });
   };
 
-  const getEventTypeIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      personal: '👤',
-      family: '👨‍👩‍👧‍👦',
-      chore: '🧹',
-      appointment: '🏥',
-      school: '🎓',
-      leisure: '🎉',
-      sport: '⚽',
-      reminder: '⏰'
-    };
-    return icons[type] || '📅';
-  };
+  // getEventTypeIcon supprimé - remplacé par les avatars des membres
 
-  const getEventTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      personal: theme.colors.primary,
-      family: '#4CAF50',
-      chore: '#FF9800',
-      appointment: '#2196F3',
-      school: '#9C27B0',
-      leisure: '#E91E63',
-      sport: '#FF5722',
-      reminder: '#607D8B'
-    };
-    return colors[type] || theme.colors.primary;
-  };
+  // getEventTypeColor supprimé - plus de catégories
 
   const getPriorityColor = (priority: string) => {
     const colors: { [key: string]: string } = {
-      low: theme.colors.success,
-      medium: theme.colors.warning,
-      high: theme.colors.error,
+      normal: theme.colors.textSecondary,
       urgent: '#D32F2F'
     };
     return colors[priority] || theme.colors.textSecondary;
@@ -67,7 +44,23 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
 
   const isCompleted = event.status === 'completed';
   const isOverdue = new Date(event.startDate) < new Date() && !isCompleted;
-  const eventColor = event.color || getEventTypeColor(event.type);
+  // Fonction pour calculer la couleur dynamiquement basée sur les assignés
+  const getEventColor = () => {
+    if (!event.assignees || event.assignees.length === 0) {
+      return theme.colors.primary; // Couleur par défaut si aucun assigné
+    }
+    
+    if (event.assignees.length === 1) {
+      // Un seul assigné : utiliser sa couleur
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      return member?.color || theme.colors.primary;
+    }
+    
+    // Plusieurs assignés : utiliser une couleur neutre (gris-bleu)
+    return '#6B7280'; // Gris-bleu pour différencier les événements multi-assignés
+  };
+  
+  const eventColor = getEventColor();
 
   const styles = StyleSheet.create({
     container: {
@@ -100,16 +93,55 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
       alignItems: 'flex-start',
       gap: 12,
     },
-    iconContainer: {
+    avatarsContainer: {
+      flexDirection: 'column',
+      alignItems: 'center',
       width: 32,
-      height: 32,
-      borderRadius: 8,
-      backgroundColor: eventColor + '15',
+      height: 'auto',
+      gap: 0,
+    },
+    avatarWrapper: {
+      borderWidth: 2,
+      borderColor: '#FFFFFF',
+      borderRadius: 16,
+    },
+    memberAvatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+    },
+    memberAvatarFallback: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    eventIcon: {
+    memberAvatarText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    defaultIconContainer: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    defaultIcon: {
       fontSize: 16,
+    },
+    moreIndicator: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: -4,
+    },
+    moreText: {
+      fontSize: 10,
+      fontWeight: '600',
     },
     textContent: {
       flex: 1,
@@ -140,6 +172,16 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
       width: 8,
       height: 8,
       borderRadius: 4,
+    },
+    priorityBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    priorityText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#FFFFFF',
     },
     statusBadge: {
       paddingHorizontal: 8,
@@ -191,8 +233,49 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
     >
       <View style={styles.header}>
         <View style={styles.leftContent}>
-          <View style={[styles.iconContainer, { backgroundColor: eventColor + '15' }]}>
-            <Text style={styles.eventIcon}>{getEventTypeIcon(event.type)}</Text>
+          {/* Avatars des membres assignés */}
+          <View style={styles.avatarsContainer}>
+            {event.assignees && event.assignees.length > 0 ? (
+              event.assignees.slice(0, 2).map((assigneeId, index) => {
+                const member = familyMembers?.find(m => m.id === assigneeId);
+                
+                return (
+                  <View 
+                    key={assigneeId} 
+                    style={[
+                      styles.avatarWrapper,
+                      index > 0 && { marginTop: -8 }
+                    ]}
+                  >
+                    {member ? (
+                      member.avatarUrl ? (
+                        <Image 
+                          source={{ uri: member.avatarUrl }} 
+                          style={styles.memberAvatar}
+                        />
+                      ) : (
+                        <View style={[styles.memberAvatarFallback, { backgroundColor: eventColor + '20' }]}>
+                          <Text style={styles.memberAvatarText}>{member.avatar}</Text>
+                        </View>
+                      )
+                    ) : (
+                      <View style={[styles.defaultIconContainer, { backgroundColor: eventColor + '15' }]}>
+                        <Text style={styles.defaultIcon}>📅</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            ) : (
+              <View style={[styles.defaultIconContainer, { backgroundColor: eventColor + '15' }]}>
+                <Text style={styles.defaultIcon}>📅</Text>
+              </View>
+            )}
+            {event.assignees && event.assignees.length > 2 && (
+              <View style={[styles.moreIndicator, { backgroundColor: theme.colors.textSecondary + '20' }]}>
+                <Text style={[styles.moreText, { color: theme.colors.textSecondary }]}>+{event.assignees.length - 2}</Text>
+              </View>
+            )}
           </View>
           
           <View style={styles.textContent}>
@@ -214,11 +297,13 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
         </View>
         
         <View style={styles.rightContent}>
-          {event.priority && event.priority !== 'medium' && (
+          {event.priority === 'urgent' && (
             <View style={[
-              styles.priorityDot,
+              styles.priorityBadge,
               { backgroundColor: getPriorityColor(event.priority) }
-            ]} />
+            ]}>
+              <Text style={styles.priorityText}>URGENT</Text>
+            </View>
           )}
           
           {isCompleted && (

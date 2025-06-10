@@ -13,7 +13,7 @@ import {
   Platform
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { CalendarEvent, FamilyMember, EventType, EventPriority } from '../../types/calendar';
+import { CalendarEvent, FamilyMember, EventPriority } from '../../types/calendar';
 import DatePicker from './DatePicker';
 import RecurrenceSelector from './RecurrenceSelector';
 
@@ -45,14 +45,14 @@ const EventModal: React.FC<EventModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [type, setType] = useState<EventType>('personal');
-  const [priority, setPriority] = useState<EventPriority>('medium');
+  // const [type, setType] = useState<EventType>('personal'); // Supprimé - plus de catégories
+  const [priority, setPriority] = useState<EventPriority>('normal');
   const [isAllDay, setIsAllDay] = useState(false);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [tribsReward, setTribsReward] = useState('');
-  const [color, setColor] = useState('');
+  // const [color, setColor] = useState(''); // Supprimé - couleur automatique
   const [recurrence, setRecurrence] = useState<any>(null);
   const [reminders, setReminders] = useState<number[]>([]);
 
@@ -63,28 +63,28 @@ const EventModal: React.FC<EventModalProps> = ({
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [showRecurrenceSelector, setShowRecurrenceSelector] = useState(false);
 
-  const eventTypes: { value: EventType; label: string; icon: string }[] = [
-    { value: 'personal', label: 'Personnel', icon: '👤' },
-    { value: 'family', label: 'Famille', icon: '👨‍👩‍👧‍👦' },
-    { value: 'chore', label: 'Tâche ménagère', icon: '🧹' },
-    { value: 'appointment', label: 'Rendez-vous', icon: '🏥' },
-    { value: 'school', label: 'École', icon: '🎓' },
-    { value: 'leisure', label: 'Loisir', icon: '🎉' },
-    { value: 'sport', label: 'Sport', icon: '⚽' },
-    { value: 'reminder', label: 'Rappel', icon: '⏰' }
-  ];
+  // eventTypes supprimé - plus de catégories
 
   const priorities: { value: EventPriority; label: string; color: string }[] = [
-    { value: 'low', label: 'Faible', color: theme.colors.success },
-    { value: 'medium', label: 'Moyenne', color: theme.colors.warning },
-    { value: 'high', label: 'Élevée', color: theme.colors.error },
-    { value: 'urgent', label: 'Urgente', color: '#D32F2F' }
+    { value: 'normal', label: 'Normal', color: theme.colors.textSecondary },
+    { value: 'urgent', label: 'Urgent', color: '#D32F2F' }
   ];
 
-  const eventColors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
-  ];
+  // Fonction pour déterminer automatiquement la couleur de l'événement
+  const getEventColor = () => {
+    if (assignedTo.length === 0) {
+      return theme.colors.primary; // Couleur par défaut si aucun assigné
+    }
+    
+    if (assignedTo.length === 1) {
+      // Un seul assigné : utiliser sa couleur
+      const member = familyMembers.find(m => m.id === assignedTo[0]);
+      return member?.color || theme.colors.primary;
+    }
+    
+    // Plusieurs assignés : utiliser une couleur neutre (gris-bleu)
+    return '#6B7280'; // Gris-bleu pour différencier les événements multi-assignés
+  };
 
   const reminderOptions = [
     { value: 0, label: 'À l\'heure' },
@@ -103,14 +103,20 @@ const EventModal: React.FC<EventModalProps> = ({
       setTitle(event.title);
       setDescription(event.description || '');
       setLocation(event.location || '');
-      setType(event.type);
+      // setType(event.type); // Supprimé - plus de catégories
       setPriority(event.priority);
       setIsAllDay(event.allDay); // Correction: event.isAllDay -> event.allDay
       setStartDate(new Date(event.startDate));
       setEndDate(event.endDate ? new Date(event.endDate) : new Date(event.startDate));
-      setAssignedTo(event.assignedTo || []);
+      // Mapper les assignees (userId) vers les IDs de membres pour l'affichage
+      const mappedAssignees = (event.assignees || []).map(userId => {
+        // Chercher le membre qui a ce userId
+        const member = familyMembers?.find(m => m.userId === userId);
+        return member ? member.id : userId; // Si trouvé, utiliser l'ID membre, sinon garder l'userId
+      });
+      setAssignedTo(mappedAssignees);
       setTribsReward(event.tribsReward?.toString() || '');
-      setColor(event.color || '');
+      // La couleur sera automatiquement déterminée, pas besoin de la charger
       setRecurrence(event.recurrence || null);
       setReminders(event.reminders || []);
     } else {
@@ -125,14 +131,14 @@ const EventModal: React.FC<EventModalProps> = ({
     setTitle('');
     setDescription('');
     setLocation('');
-    setType('personal');
-    setPriority('medium');
+    // setType('personal'); // Supprimé - plus de catégories
+    setPriority('normal');
     setIsAllDay(false);
     setStartDate(baseDate);
     setEndDate(new Date(baseDate.getTime() + 60 * 60 * 1000)); // +1 hour
     setAssignedTo([]);
     setTribsReward('');
-    setColor('');
+    // La couleur sera automatiquement déterminée, pas besoin de la réinitialiser
     setRecurrence(null);
     setReminders([]);
   };
@@ -153,14 +159,14 @@ const EventModal: React.FC<EventModalProps> = ({
       title: title.trim(),
       description: description.trim() || null,
       location: location.trim() || null,
-      type,
+      // type, // Supprimé - plus de catégories
       priority,
       allDay: isAllDay, // Correction: isAllDay -> allDay pour correspondre au type CalendarEvent
       startDate: startDate.toISOString(),
       endDate: isAllDay ? null : endDate.toISOString(),
-      assignedTo: assignedTo.length > 0 ? assignedTo : null,
+      assignees: assignedTo.length > 0 ? assignedTo : null,
       tribsReward: tribsReward ? parseInt(tribsReward) : null,
-      color: color || null,
+      // color: getEventColor(), // Supprimé - couleur calculée dynamiquement à l'affichage
       recurrence: recurrence || null,
       reminders: reminders.length > 0 ? reminders : null,
       status: event?.status || 'pending'
@@ -191,10 +197,14 @@ const EventModal: React.FC<EventModalProps> = ({
   };
 
   const toggleAssignedMember = (memberId: string) => {
+    // Trouver le membre pour récupérer son userId
+    const member = familyMembers?.find(m => m.id === memberId);
+    const userIdToUse = member?.userId || memberId; // Utiliser userId si disponible, sinon fallback sur memberId
+    
     setAssignedTo(prev => 
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
+      prev.includes(userIdToUse)
+        ? prev.filter(id => id !== userIdToUse)
+        : [...prev, userIdToUse]
     );
   };
 
@@ -318,21 +328,24 @@ const EventModal: React.FC<EventModalProps> = ({
     dateValue: {
       fontSize: 16,
     },
-    priorityContainer: {
+    priorityRow: {
       flexDirection: 'row',
-      gap: 8,
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
-    priorityButton: {
-      flex: 1,
-      paddingVertical: 8,
+    priorityToggleContainer: {
+      alignItems: 'flex-end',
+    },
+    priorityToggle: {
+      paddingVertical: 6,
       paddingHorizontal: 12,
-      borderRadius: 8,
+      borderRadius: 6,
       borderWidth: 1,
       alignItems: 'center',
     },
-    priorityLabel: {
-      fontSize: 14,
-      fontWeight: '500',
+    priorityToggleText: {
+      fontSize: 12,
+      fontWeight: '600',
     },
     membersContainer: {
       flexDirection: 'row',
@@ -349,19 +362,7 @@ const EventModal: React.FC<EventModalProps> = ({
       fontSize: 14,
       fontWeight: '500',
     },
-    colorContainer: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    colorButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-    },
-    selectedColor: {
-      borderWidth: 3,
-      borderColor: '#000',
-    },
+    // Styles pour le sélecteur de couleur supprimés - couleur automatique
     optionButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -451,41 +452,7 @@ const EventModal: React.FC<EventModalProps> = ({
             />
           </View>
 
-          {/* Event Type */}
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.typeContainer}>
-                {eventTypes.map((eventType) => (
-                  <TouchableOpacity
-                    key={eventType.value}
-                    style={[
-                      styles.typeButton,
-                      {
-                        backgroundColor: type === eventType.value 
-                          ? theme.colors.primary 
-                          : theme.colors.surface,
-                        borderColor: theme.colors.border
-                      }
-                    ]}
-                    onPress={() => setType(eventType.value)}
-                  >
-                    <Text style={styles.typeIcon}>{eventType.icon}</Text>
-                    <Text style={[
-                      styles.typeLabel,
-                      {
-                        color: type === eventType.value 
-                          ? theme.colors.background 
-                          : theme.colors.text
-                      }
-                    ]}>
-                      {eventType.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
+          {/* Section Type supprimée - plus de catégories */}
 
           {/* All Day Toggle */}
           <View style={styles.section}>
@@ -623,34 +590,33 @@ const EventModal: React.FC<EventModalProps> = ({
 
           {/* Priority */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Priorité</Text>
-            <View style={styles.priorityContainer}>
-              {priorities.map((priorityOption) => (
+            <View style={styles.priorityRow}>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Marquer comme urgent</Text>
+              <View style={styles.priorityToggleContainer}>
                 <TouchableOpacity
-                  key={priorityOption.value}
                   style={[
-                    styles.priorityButton,
+                    styles.priorityToggle,
                     {
-                      backgroundColor: priority === priorityOption.value 
-                        ? priorityOption.color 
+                      backgroundColor: priority === 'urgent' 
+                        ? '#D32F2F' 
                         : theme.colors.surface,
-                      borderColor: priorityOption.color
+                      borderColor: '#D32F2F'
                     }
                   ]}
-                  onPress={() => setPriority(priorityOption.value)}
+                  onPress={() => setPriority(priority === 'urgent' ? 'normal' : 'urgent')}
                 >
                   <Text style={[
-                    styles.priorityLabel,
+                    styles.priorityToggleText,
                     {
-                      color: priority === priorityOption.value 
+                      color: priority === 'urgent' 
                         ? theme.colors.background 
-                        : priorityOption.color
+                        : '#D32F2F'
                     }
                   ]}>
-                    {priorityOption.label}
+                    {priority === 'urgent' ? '✓ URGENT' : 'URGENT'}
                   </Text>
                 </TouchableOpacity>
-              ))}
+              </View>
             </View>
           </View>
 
@@ -665,7 +631,14 @@ const EventModal: React.FC<EventModalProps> = ({
                     style={[
                       styles.memberButton,
                       {
-                        backgroundColor: assignedTo.includes(member.id) 
+                        backgroundColor: (() => {
+                          const userIdToCheck = member.userId || member.id;
+                          // Vérifier si ce membre est assigné en comparant avec les userId stockés
+                          return assignedTo.some(assignedId => {
+                            const assignedMember = familyMembers?.find(m => m.id === assignedId);
+                            return (assignedMember?.userId || assignedId) === userIdToCheck;
+                          });
+                        })() 
                           ? theme.colors.primary 
                           : theme.colors.surface,
                         borderColor: theme.colors.border
@@ -676,9 +649,17 @@ const EventModal: React.FC<EventModalProps> = ({
                     <Text style={[
                       styles.memberLabel,
                       {
-                        color: assignedTo.includes(member.id) 
-                          ? theme.colors.background 
-                          : theme.colors.text
+                        color: (() => {
+                          const userIdToCheck = member.userId || member.id;
+                          // Vérifier si ce membre est assigné en comparant avec les userId stockés
+                          const isAssigned = assignedTo.some(assignedId => {
+                            const assignedMember = familyMembers?.find(m => m.id === assignedId);
+                            return (assignedMember?.userId || assignedId) === userIdToCheck;
+                          });
+                          return isAssigned 
+                            ? theme.colors.background 
+                            : theme.colors.text;
+                        })()
                       }
                     ]}>
                       {member.name}
@@ -706,25 +687,7 @@ const EventModal: React.FC<EventModalProps> = ({
             />
           </View>
 
-          {/* Color */}
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Couleur</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.colorContainer}>
-                {eventColors.map((eventColor) => (
-                  <TouchableOpacity
-                    key={eventColor}
-                    style={[
-                      styles.colorButton,
-                      { backgroundColor: eventColor },
-                      color === eventColor && styles.selectedColor
-                    ]}
-                    onPress={() => setColor(eventColor)}
-                  />
-                ))}
-              </View>
-            </ScrollView>
-          </View>
+          {/* Couleur automatique basée sur les participants - plus de sélection manuelle */}
 
           {/* Recurrence */}
           <View style={styles.section}>

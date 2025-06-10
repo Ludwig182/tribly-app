@@ -160,6 +160,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
             onEventSelect={handleEventSelect}
             onDateSelect={selectDate}
             onEventCreate={handleEventCreate}
+            familyMembers={familyMembers}
           />
         );
       case 'day':
@@ -189,6 +190,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
             onDateSelect={selectDate}
             onEventSelect={handleEventSelect}
             onEventCreate={handleEventCreate}
+            familyMembers={familyMembers}
           />
         );
     }

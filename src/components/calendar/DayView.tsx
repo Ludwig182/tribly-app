@@ -19,10 +19,27 @@ const DayView: React.FC<DayViewProps> = ({
   currentDate, // currentDate est toujours la date sélectionnée pour DayView
   events,
   onEventSelect,
-  onEventCreate
+  onEventCreate,
+  familyMembers
 }) => {
   const theme = useTheme();
   const { navigateToNextDay, navigateToPreviousDay } = useCalendar(); // Utiliser les fonctions de navigation
+  
+  // Fonction pour calculer la couleur dynamiquement basée sur les assignés
+  const getEventColor = (event: CalendarEvent) => {
+    if (!event.assignees || event.assignees.length === 0) {
+      return theme.colors.primary; // Couleur par défaut si aucun assigné
+    }
+    
+    if (event.assignees.length === 1) {
+      // Un seul assigné : utiliser sa couleur
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      return member?.color || theme.colors.primary;
+    }
+    
+    // Plusieurs assignés : utiliser une couleur neutre (gris-bleu)
+    return '#6B7280'; // Gris-bleu pour différencier les événements multi-assignés
+  };
   const { width } = Dimensions.get('window');
   const eventColumnWidth = width - 80; // 80 pour la colonne des heures
 
@@ -474,7 +491,7 @@ const DayView: React.FC<DayViewProps> = ({
                   key={index}
                   style={[
                     styles.allDayEvent,
-                    { backgroundColor: event.color || theme.colors.primary }
+                    { backgroundColor: getEventColor(event) }
                   ]}
                   onPress={() => onEventSelect(event)}
                 >
@@ -582,7 +599,7 @@ const DayView: React.FC<DayViewProps> = ({
                         style={[
                           styles.absoluteEventContainer,
                           {
-                            backgroundColor: event.color || theme.colors.primary,
+                            backgroundColor: getEventColor(event),
                             height: eventHeight,
                             top: topPosition,
                             width: layout.width,

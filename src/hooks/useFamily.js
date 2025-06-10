@@ -259,6 +259,7 @@ export const FamilyProvider = ({ children }) => {
     // États calculés utiles
     familyName: familyData?.familyName || familyData?.name || 'Famille',
     familyCode: familyData?.familyCode || 'QUESTROY-L4K8',
+    familyMembers: familyData?.members || [],
     
     // Actions
     ...familyActions

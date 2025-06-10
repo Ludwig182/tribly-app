@@ -10,11 +10,11 @@ import {
   Switch
 } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
-import { EventType, EventPriority, FamilyMember } from '../../types/calendar';
+import { EventPriority, FamilyMember } from '../../types/calendar';
 
 export type CalendarFilters = {
   searchQuery: string;
-  eventTypes: EventType[];
+  // eventTypes: EventType[]; // Supprimé - plus de catégories
   priorities: EventPriority[];
   assignedMembers: string[];
   dateRange: {
@@ -59,22 +59,11 @@ const CalendarFiltersComponent: React.FC<CalendarFiltersProps> = ({
   const theme = useTheme();
   const [localFilters, setLocalFilters] = useState<CalendarFilters>(filters);
 
-  const eventTypes: { value: EventType; label: string; icon: string }[] = [
-    { value: 'personal', label: 'Personnel', icon: '👤' },
-    { value: 'family', label: 'Famille', icon: '👨‍👩‍👧‍👦' },
-    { value: 'chore', label: 'Tâche ménagère', icon: '🧹' },
-    { value: 'appointment', label: 'Rendez-vous', icon: '🏥' },
-    { value: 'school', label: 'École', icon: '🎓' },
-    { value: 'leisure', label: 'Loisir', icon: '🎉' },
-    { value: 'sport', label: 'Sport', icon: '⚽' },
-    { value: 'reminder', label: 'Rappel', icon: '⏰' }
-  ];
+  // eventTypes supprimé - plus de catégories
 
   const priorities: { value: EventPriority; label: string; color: string }[] = [
-    { value: 'low', label: 'Faible', color: theme.colors.success },
-    { value: 'medium', label: 'Moyenne', color: theme.colors.warning },
-    { value: 'high', label: 'Élevée', color: theme.colors.error },
-    { value: 'urgent', label: 'Urgente', color: '#D32F2F' }
+    { value: 'normal', label: 'Normal', color: theme.colors.textSecondary },
+    { value: 'urgent', label: 'Urgent', color: '#D32F2F' }
   ];
 
   React.useEffect(() => {
@@ -94,7 +83,7 @@ const CalendarFiltersComponent: React.FC<CalendarFiltersProps> = ({
   const handleReset = () => {
     const resetFilters: CalendarFilters = {
       searchQuery: '',
-      eventTypes: [],
+      // eventTypes: [], // Supprimé - plus de catégories
       priorities: [],
       assignedMembers: [],
       dateRange: {},
@@ -106,12 +95,7 @@ const CalendarFiltersComponent: React.FC<CalendarFiltersProps> = ({
     onReset();
   };
 
-  const toggleEventType = (type: EventType) => {
-    const newTypes = localFilters.eventTypes.includes(type)
-      ? localFilters.eventTypes.filter(t => t !== type)
-      : [...localFilters.eventTypes, type];
-    updateFilters({ eventTypes: newTypes });
-  };
+  // toggleEventType supprimé - plus de catégories
 
   const togglePriority = (priority: EventPriority) => {
     const newPriorities = localFilters.priorities.includes(priority)
@@ -130,7 +114,7 @@ const CalendarFiltersComponent: React.FC<CalendarFiltersProps> = ({
   const getActiveFiltersCount = () => {
     let count = 0;
     if (localFilters.searchQuery) count++;
-    if (localFilters.eventTypes.length > 0) count++;
+    // if (localFilters.eventTypes.length > 0) count++; // Supprimé - plus de catégories
     if (localFilters.priorities.length > 0) count++;
     if (localFilters.assignedMembers.length > 0) count++;
     if (localFilters.dateRange.start || localFilters.dateRange.end) count++;
@@ -327,39 +311,7 @@ const CalendarFiltersComponent: React.FC<CalendarFiltersProps> = ({
             />
           </View>
 
-          {/* Event Types */}
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Types d'événements</Text>
-            <View style={styles.filterGrid}>
-              {eventTypes.map((type) => (
-                <TouchableOpacity
-                  key={type.value}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: localFilters.eventTypes.includes(type.value)
-                        ? theme.colors.primary
-                        : theme.colors.surface,
-                      borderColor: theme.colors.border
-                    }
-                  ]}
-                  onPress={() => toggleEventType(type.value)}
-                >
-                  <Text style={styles.filterIcon}>{type.icon}</Text>
-                  <Text style={[
-                    styles.filterText,
-                    {
-                      color: localFilters.eventTypes.includes(type.value)
-                        ? theme.colors.background
-                        : theme.colors.text
-                    }
-                  ]}>
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          {/* Section Types supprimée - plus de catégories */}
 
           {/* Priorities */}
           <View style={styles.section}>
