@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList, Platform } from 'react-native';
 import { useTheme } from '../../theme/useTheme';
 import { CalendarEvent } from '../../types/calendar';
 import ModernEventCard from './ModernEventCard';
@@ -111,7 +111,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({
       <Text style={styles.emptySubtitle}>
         Vous n'avez aucun événement planifié pour cette période
       </Text>
-      <TouchableOpacity style={styles.addButton} onPress={onEventCreate}>
+      <TouchableOpacity style={styles.addButton} onPress={() => onEventCreate()}>
         <Text style={styles.addButtonText}>+ Ajouter un événement</Text>
       </TouchableOpacity>
     </View>
@@ -179,6 +179,26 @@ const AgendaView: React.FC<AgendaViewProps> = ({
       fontSize: 16,
       fontWeight: '600',
     },
+    floatingAddButton: {
+      position: 'absolute',
+      bottom: Platform.OS === 'ios' ? 34 + 10 : 28, // Ajustement pour TabBar iOS
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 4, // Ombre Android
+      shadowColor: '#000', // Ombre iOS
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    },
+    floatingAddButtonText: {
+      fontSize: 32,
+      fontWeight: '300',
+      marginTop: -2, // Ajustement visuel
+    },
 
   });
 
@@ -210,6 +230,16 @@ const AgendaView: React.FC<AgendaViewProps> = ({
           {renderListHeader()}
           {renderEmptyState()}
         </View>
+      )}
+      
+      {/* Bouton flottant + quand il y a des événements */}
+      {eventSections.length > 0 && (
+        <TouchableOpacity
+          style={[styles.floatingAddButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => onEventCreate()}
+        >
+          <Text style={[styles.floatingAddButtonText, { color: theme.colors.onPrimary || 'white' }]}>+</Text>
+        </TouchableOpacity>
       )}
     </View>
   );

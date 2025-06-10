@@ -83,7 +83,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
   };
 
   const handleEventCreate = (dateWithTime?: Date) => {
-    console.log('📅 CalendarScreen - Date reçue:', dateWithTime?.toISOString(), 'Date utilisée:', (dateWithTime || currentDate).toISOString());
+    console.log('📅 CalendarScreen - Date reçue:', dateWithTime instanceof Date ? dateWithTime.toISOString() : 'undefined', 'Date utilisée:', (dateWithTime || currentDate).toISOString());
     setSelectedEvent(undefined);
     setEventCreationDate(dateWithTime);
     setIsEventModalVisible(true);

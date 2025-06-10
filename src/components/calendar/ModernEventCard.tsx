@@ -52,7 +52,9 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
     
     if (event.assignees.length === 1) {
       // Un seul assigné : utiliser sa couleur
-      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      // Chercher d'abord par userId, puis par id en fallback
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]) || 
+                     familyMembers?.find(m => m.id === event.assignees[0]);
       return member?.color || theme.colors.primary;
     }
     
@@ -237,7 +239,9 @@ const ModernEventCard: React.FC<ModernEventCardProps> = ({
           <View style={styles.avatarsContainer}>
             {event.assignees && event.assignees.length > 0 ? (
               event.assignees.slice(0, 2).map((assigneeId, index) => {
-                const member = familyMembers?.find(m => m.id === assigneeId);
+                // Chercher d'abord par userId, puis par id en fallback
+                const member = familyMembers?.find(m => m.userId === assigneeId) || 
+                               familyMembers?.find(m => m.id === assigneeId);
                 
                 return (
                   <View 

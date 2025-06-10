@@ -34,7 +34,9 @@ const WeekView: React.FC<WeekViewProps> = ({
     
     if (event.assignees.length === 1) {
       // Un seul assigné : utiliser sa couleur
-      const member = familyMembers?.find(m => m.userId === event.assignees[0]);
+      // Chercher d'abord par userId, puis par id en fallback
+      const member = familyMembers?.find(m => m.userId === event.assignees[0]) || 
+                     familyMembers?.find(m => m.id === event.assignees[0]);
       return member?.color || theme.colors.primary;
     }
     

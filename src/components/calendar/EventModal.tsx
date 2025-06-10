@@ -97,7 +97,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   useEffect(() => {
     const dateToUse = eventCreationDate || selectedDate;
-    console.log('📝 EventModal - selectedDate reçue:', selectedDate?.toISOString(), 'eventCreationDate:', eventCreationDate?.toISOString(), 'visible:', visible);
+    console.log('📝 EventModal - selectedDate reçue:', selectedDate instanceof Date ? selectedDate.toISOString() : 'undefined', 'eventCreationDate:', eventCreationDate instanceof Date ? eventCreationDate.toISOString() : 'undefined', 'visible:', visible);
     if (event) {
       // Load existing event data
       setTitle(event.title);
@@ -127,7 +127,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   const resetForm = (defaultDate?: Date) => {
     const baseDate = defaultDate || new Date();
-    console.log('🔄 resetForm - defaultDate:', defaultDate?.toISOString(), 'baseDate utilisée:', baseDate.toISOString());
+    console.log('🔄 resetForm - defaultDate:', defaultDate instanceof Date ? defaultDate.toISOString() : 'undefined', 'baseDate utilisée:', baseDate.toISOString());
     setTitle('');
     setDescription('');
     setLocation('');
@@ -760,7 +760,7 @@ const EventModal: React.FC<EventModalProps> = ({
             date={startDate}
             mode={'date'}
             onConfirm={(date) => {
-              console.log('🔍 EventModal - DatePicker onConfirm called with:', date.toISOString());
+              console.log('🔍 EventModal - DatePicker onConfirm called with:', date instanceof Date ? date.toISOString() : 'undefined');
               try {
                 // Préserver l'heure actuelle
                 const newDate = new Date(date);
