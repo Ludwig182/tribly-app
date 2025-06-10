@@ -29,7 +29,7 @@ export interface CalendarEvent {
   color?: string;         // Couleur de l'événement
   recurrence?: EventRecurrence;
   recurrenceEndDate?: Date | Timestamp;
-  reminder?: number;      // Minutes avant l'événement pour le rappel
+  reminders?: number[] | null; // Minutes avant l'événement pour les rappels
   completed?: boolean;    // Pour les événements de type 'task' ou 'reminder'
   completedBy?: string;   // ID du membre qui a complété l'événement
   completedAt?: Date | Timestamp;
