@@ -112,7 +112,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     navButton: {
       padding: 8,
       borderRadius: 8,
-      backgroundColor: theme.colors.primary,
+      backgroundColor: theme.colors.calendarNavBackground,
       minWidth: 40,
       minHeight: 40,
       alignItems: 'center',
@@ -121,7 +121,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     navButtonText: {
       fontSize: 18,
       fontWeight: '600',
-      color: 'white',
+      color: theme.colors.calendarNavIcon,
     },
     currentDateText: {
       fontSize: 16,
@@ -131,8 +131,13 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     todayButton: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 6,
-      backgroundColor: theme.colors.primary,
+      borderRadius: 20,
+      backgroundColor: theme.colors.calendarTodayBackground,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     todayButtonText: {
       fontSize: 14,

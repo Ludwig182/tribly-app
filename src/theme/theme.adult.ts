@@ -38,6 +38,11 @@ const adultTheme: Theme = {
     warning: '#FF9800', // Couleur d'avertissement
     error: '#F44336', // Couleur d'erreur
     surface: '#f8f9fa', // Couleur de surface pour les éléments UI
+
+    // Couleurs navigation agenda
+    calendarNavBackground: '#FEE8F0',
+    calendarNavIcon: '#EA3A70',
+    calendarTodayBackground: '#EA3A70',
   },
   layout: {
     headerHeightCalendar: 'clamp(200px, 30vh, 260px)', // Hauteur responsive pour le header calendrier

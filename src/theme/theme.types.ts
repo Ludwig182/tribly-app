@@ -43,6 +43,11 @@ export interface ThemeColors {
   warning: string; // Couleur d'avertissement
   error: string; // Couleur d'erreur
   surface: string; // Couleur de surface pour les éléments UI
+
+  // 👇 Couleurs spécifiques pour la navigation agenda 👇
+  calendarNavBackground: string; // Fond des flèches de navigation semaine
+  calendarNavIcon: string; // Couleur des icônes de navigation semaine
+  calendarTodayBackground: string; // Fond du bouton "Aujourd'hui"
 }
 
 export interface ThemeLayout {

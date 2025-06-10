@@ -13,6 +13,7 @@ type WeekViewProps = {
   onDateSelect: (date: Date) => void;
   onEventCreate: (dateWithTime?: Date) => void;
   familyMembers: FamilyMember[];
+  selectedDate?: Date | null;
 };
 
 const WeekView: React.FC<WeekViewProps> = ({
@@ -21,7 +22,8 @@ const WeekView: React.FC<WeekViewProps> = ({
   onEventSelect,
   onDateSelect,
   onEventCreate,
-  familyMembers
+  familyMembers,
+  selectedDate
 }) => {
   const theme = useTheme();
   const { navigateToNextWeek, navigateToPreviousWeek } = useCalendar();
@@ -50,7 +52,7 @@ const WeekView: React.FC<WeekViewProps> = ({
   const getWeekDays = (date: Date) => {
     const startOfWeek = new Date(date);
     const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day; // Dimanche = 0
+    const diff = startOfWeek.getDate() - ((day + 6) % 7); // Commencer la semaine le lundi
     startOfWeek.setDate(diff);
 
     const weekDays = [];
@@ -255,9 +257,10 @@ const WeekView: React.FC<WeekViewProps> = ({
   };
 
   const formatDayHeader = (date: Date) => {
-    const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const dayNames = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
+    const index = (date.getDay() + 6) % 7;
     return {
-      dayName: dayNames[date.getDay()],
+      dayName: dayNames[index],
       dayNumber: date.getDate()
     };
   };
@@ -294,14 +297,40 @@ const WeekView: React.FC<WeekViewProps> = ({
       fontWeight: '500',
     },
     dayNumber: {
-      fontSize: 18,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    dayNumberWrapper: {
+      marginTop: 2,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    dayNumberWrapperUnselected: {
+      backgroundColor: '#F5F5F5',
+    },
+    dayNumberWrapperSelected: {
+      backgroundColor: 'transparent',
+    },
+    dayNumberUnselected: {
       color: theme.colors.text,
       fontWeight: '600',
-      marginTop: 2,
     },
-    dayNumberToday: {
-      color: theme.colors.primary,
+    dayNumberSelected: {
+      color: theme.colors.calendarNavIcon,
       fontWeight: '700',
+    },
+    agendaContainer: {
+      flex: 1,
+      marginHorizontal: 16,
+      backgroundColor: theme.colors.card,
+      borderRadius: 12,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 2,
     },
     scrollContainer: {
       flex: 1,
@@ -408,7 +437,9 @@ const WeekView: React.FC<WeekViewProps> = ({
             {weekDays.map((day, index) => {
               const { dayName, dayNumber } = formatDayHeader(day);
               const isTodayDate = isToday(day);
-              
+              const isSelectedDate =
+                selectedDate && day.toDateString() === selectedDate.toDateString();
+
               return (
                 <TouchableOpacity
                   key={index}
@@ -419,20 +450,34 @@ const WeekView: React.FC<WeekViewProps> = ({
                   onPress={() => onDateSelect(day)}
                 >
                   <Text style={styles.dayName}>{dayName}</Text>
-                  <Text style={[
-                    styles.dayNumber,
-                    isTodayDate && styles.dayNumberToday
-                  ]}>
-                    {dayNumber}
-                  </Text>
+                  <View
+                    style={[
+                      styles.dayNumberWrapper,
+                      isSelectedDate
+                        ? styles.dayNumberWrapperSelected
+                        : styles.dayNumberWrapperUnselected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayNumber,
+                        isSelectedDate
+                          ? styles.dayNumberSelected
+                          : styles.dayNumberUnselected,
+                      ]}
+                    >
+                      {dayNumber}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </View>
 
           {/* Timeline avec heures et événements */}
-          <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.timelineContainer}>
+          <View style={styles.agendaContainer}>
+            <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+              <View style={styles.timelineContainer}>
               {/* Colonne des heures */}
               <View style={styles.timelineColumn}>
                 {hours.map((hour) => (
