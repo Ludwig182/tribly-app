@@ -3,6 +3,7 @@ import React from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useFamily } from './useFamily';
 import { calendarService } from '../services/calendarService';
+import { notificationsService } from '../services/notificationsService';
 import { expandRecurringEvents } from '../utils/recurrenceUtils';
 
 // Création du contexte
@@ -199,6 +200,20 @@ export const CalendarProvider = ({ children }) => {
     console.log('[useCalendar] Final filteredEvents to be set:', JSON.parse(JSON.stringify(filtered)));
     setFilteredEvents(filtered);
   }, [events, filters]);
+
+  // 🔔 Planifier les rappels locaux pour les événements assignés
+  useEffect(() => {
+    if (!currentMember) return;
+    filteredEvents.forEach(evt => {
+      if (
+        evt.assignees?.includes(currentMember.id) &&
+        evt.reminders &&
+        evt.reminders.length > 0
+      ) {
+        notificationsService.scheduleLocalEvent(evt);
+      }
+    });
+  }, [filteredEvents, currentMember]);
   
   // Fonctions d'action
   const changeMonth = useCallback((direction) => {
