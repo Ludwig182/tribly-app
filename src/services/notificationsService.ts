@@ -39,17 +39,39 @@ export const notificationsService = {
 
   async scheduleLocalEvent(event: CalendarEventLike) {
     if (!event.reminders || !event.assignees) return;
+    
     const start = new Date(event.startDate);
+    const now = Date.now();
+    
+    console.log('🔔 [scheduleLocalEvent] Event:', event.title);
+    console.log('🔔 [scheduleLocalEvent] Start date raw:', event.startDate);
+    console.log('🔔 [scheduleLocalEvent] Start date parsed:', start);
+    console.log('🔔 [scheduleLocalEvent] Current time:', new Date(now));
+    console.log('🔔 [scheduleLocalEvent] Reminders:', event.reminders);
+    
     for (const minutes of event.reminders) {
       const triggerTime = start.getTime() - minutes * 60000;
-      if (triggerTime <= Date.now()) continue;
+      const triggerDate = new Date(triggerTime);
+      
+      console.log(`🔔 [scheduleLocalEvent] Reminder ${minutes}min before:`);
+      console.log(`🔔 [scheduleLocalEvent] - Trigger time: ${triggerDate}`);
+      console.log(`🔔 [scheduleLocalEvent] - Is in past? ${triggerTime <= now}`);
+      
+      // Ajouter une marge de sécurité de 30 secondes pour éviter les notifications immédiates
+      const safetyMargin = 30 * 1000; // 30 secondes en millisecondes
+      if (triggerTime <= now + safetyMargin) {
+        console.log('🔔 [scheduleLocalEvent] ⚠️ Skipping past/immediate reminder (with 30s safety margin)');
+        continue;
+      }
+      
+      console.log('🔔 [scheduleLocalEvent] ✅ Scheduling notification');
       await Notifications.scheduleNotificationAsync({
         content: {
           title: event.title,
           body: event.location ? `\uD83D\uDCCD ${event.location}` : 'Rappel',
           data: { eventId: event.id },
         },
-        trigger: { date: new Date(triggerTime) },
+        trigger: { date: triggerDate },
       });
     }
   },

@@ -140,7 +140,7 @@ const EventModal: React.FC<EventModalProps> = ({
     setTribsReward('');
     // La couleur sera automatiquement déterminée, pas besoin de la réinitialiser
     setRecurrence(null);
-    setReminders([]);
+    setReminders([15]); // Rappel par défaut à 15 minutes
   };
 
   const handleSave = () => {

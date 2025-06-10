@@ -1,6 +1,6 @@
 // src/hooks/useCalendar.js
 import React from 'react';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useFamily } from './useFamily';
 import { calendarService } from '../services/calendarService';
 import { notificationsService } from '../services/notificationsService';
@@ -202,17 +202,41 @@ export const CalendarProvider = ({ children }) => {
   }, [events, filters]);
 
   // 🔔 Planifier les rappels locaux pour les événements assignés
+  const scheduledEventIdsRef = useRef(new Set());
+  
   useEffect(() => {
     if (!currentMember) return;
-    filteredEvents.forEach(evt => {
-      if (
-        evt.assignees?.includes(currentMember.id) &&
-        evt.reminders &&
-        evt.reminders.length > 0
-      ) {
-        notificationsService.scheduleLocalEvent(evt);
-      }
+    
+    // Debug: examiner tous les événements et leurs rappels
+    console.log('🔍 [useCalendar] Debug événements:');
+    filteredEvents.forEach((evt, index) => {
+      console.log(`  ${index + 1}. ${evt.title}:`);
+      console.log(`     - Reminders: ${JSON.stringify(evt.reminders)} (type: ${typeof evt.reminders})`);
+      console.log(`     - Assignees: ${JSON.stringify(evt.assignees)}`);
+      console.log(`     - Current member: ${currentMember.id}`);
+      console.log(`     - Is assigned: ${evt.assignees?.includes(currentMember.id)}`);
     });
+    
+    const eventsToSchedule = filteredEvents.filter(evt => 
+      evt.assignees?.includes(currentMember.id) &&
+      evt.reminders &&
+      evt.reminders.length > 0 &&
+      !scheduledEventIdsRef.current.has(evt.id)
+    );
+    
+    if (eventsToSchedule.length > 0) {
+      console.log('🔔 Programmation notifications pour:', eventsToSchedule.map(e => e.title));
+      
+      eventsToSchedule.forEach(evt => {
+        notificationsService.scheduleLocalEvent(evt);
+        scheduledEventIdsRef.current.add(evt.id);
+      });
+    }
+    
+    // Nettoyer les IDs d'événements supprimés
+    const currentEventIds = new Set(filteredEvents.map(evt => evt.id));
+    const toRemove = [...scheduledEventIdsRef.current].filter(id => !currentEventIds.has(id));
+    toRemove.forEach(id => scheduledEventIdsRef.current.delete(id));
   }, [filteredEvents, currentMember]);
   
   // Fonctions d'action

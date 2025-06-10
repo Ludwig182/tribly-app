@@ -95,7 +95,7 @@ export const familyService = {
    */
   async updateMember(familyId, memberId, memberData) {
     try {
-      console.log('🔄 Mise à jour membre:', { familyId, memberId, memberData });
+      // console.log('🔄 Mise à jour membre:', { familyId, memberId, memberData });
       
       // 1. Récupérer la famille actuelle
       const familyRef = doc(db, 'families', familyId);
@@ -132,7 +132,7 @@ export const familyService = {
         updatedAt: serverTimestamp()
       });
       
-      console.log('✅ Membre mis à jour avec succès');
+      // console.log('✅ Membre mis à jour avec succès');
       return updatedMembers[memberIndex];
       
     } catch (error) {

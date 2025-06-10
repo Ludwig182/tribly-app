@@ -6,7 +6,9 @@ import {
   connectAuthEmulator 
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -49,4 +51,17 @@ try {
   // Fallback : utiliser l'auth par défaut
   auth = getAuth(app);
   console.log('⚠️ Firebase Auth initialisé en mode fallback');
+}
+
+export const storage = getStorage(app);
+
+// Configuration des notifications
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
 }

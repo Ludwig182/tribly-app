@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "tribly-app",
-    "slug": "tribly-app",
+    "slug": "tribly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -33,10 +33,25 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff",
+          "defaultChannel": "default"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f05c61ea-d95b-45f4-b805-f65c59ab1b10"
+      },
+      "router": {}
+    },
+    "owner": "ludwig182"
   }
 }

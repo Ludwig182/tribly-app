@@ -53,7 +53,6 @@ export const FamilyProvider = ({ children }) => {
     if (familyData && familyData.members && currentMember) {
       const updatedMember = familyData.members.find(m => m.id === currentMember.id);
       if (updatedMember && JSON.stringify(updatedMember) !== JSON.stringify(currentMember)) {
-        console.log('🔄 Synchronisation du membre actuel avec les données famille:', updatedMember.name);
         setCurrentMember(updatedMember);
       }
     }
@@ -61,7 +60,7 @@ export const FamilyProvider = ({ children }) => {
 
   // 🔔 Enregistrer la device pour les notifications push
   useEffect(() => {
-    if (familyId && currentMember) {
+    if (familyId && currentMember && !currentMember.expoPushToken) {
       notificationsService.registerDevice(familyId, currentMember.id).catch(e =>
         console.warn('Push registration failed', e)
       );
