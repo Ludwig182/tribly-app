@@ -39,8 +39,22 @@ export const notificationsService = {
 
   async scheduleLocalEvent(event: CalendarEventLike) {
     if (!event.reminders || !event.assignees) return;
-    
-    const start = new Date(event.startDate);
+
+    let start: Date;
+    if (
+      event.startDate &&
+      typeof (event.startDate as any).toDate === 'function'
+    ) {
+      start = (event.startDate as any).toDate();
+    } else {
+      start = new Date(event.startDate as any);
+    }
+
+    if (isNaN(start.getTime())) {
+      console.warn('Invalid start date for event', event);
+      return;
+    }
+
     const now = Date.now();
     
     console.log('🔔 [scheduleLocalEvent] Event:', event.title);
