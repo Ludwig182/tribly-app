@@ -178,6 +178,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
             events={finalFilteredEvents}
             onEventSelect={handleEventSelect}
             onEventCreate={handleEventCreate}
+            onEventDelete={handleEventDelete}
             currentDate={currentDate}
           />
         );

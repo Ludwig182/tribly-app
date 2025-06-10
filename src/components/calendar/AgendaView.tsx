@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList, Platform } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../theme/useTheme';
 import { CalendarEvent } from '../../types/calendar';
 import ModernEventCard from './ModernEventCard';
@@ -10,6 +11,7 @@ type AgendaViewProps = {
   onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (dateWithTime?: Date) => void;
   currentDate: Date;
+  onEventDelete: (eventId: string) => void;
 };
 
 type EventSection = {
@@ -22,7 +24,8 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   events,
   onEventSelect,
   onEventCreate,
-  currentDate
+  currentDate,
+  onEventDelete
 }) => {
   const theme = useTheme();
 
@@ -97,12 +100,26 @@ const AgendaView: React.FC<AgendaViewProps> = ({
     </View>
   );
 
+  const renderRightActions = (event: CalendarEvent) => (
+    <TouchableOpacity
+      style={[styles.deleteAction, { backgroundColor: theme.colors.error }]}
+      onPress={() => onEventDelete(event.id)}
+    >
+      <Text style={styles.deleteActionText}>Supprimer</Text>
+    </TouchableOpacity>
+  );
+
   const renderEventItem = ({ item }: { item: CalendarEvent }) => (
-    <ModernEventCard
-      event={item}
-      onEdit={() => onEventSelect(item)}
-      onComplete={() => {/* TODO: Implement complete */}}
-    />
+    <Swipeable
+      renderRightActions={() => renderRightActions(item)}
+      onSwipeableOpen={() => onEventDelete(item.id)}
+    >
+      <ModernEventCard
+        event={item}
+        onEdit={() => onEventSelect(item)}
+        onComplete={() => {/* TODO: Implement complete */}}
+      />
+    </Swipeable>
   );
 
   const renderEmptyState = () => (
@@ -177,6 +194,16 @@ const AgendaView: React.FC<AgendaViewProps> = ({
     addButtonText: {
       color: theme.colors.background,
       fontSize: 16,
+      fontWeight: '600',
+    },
+    deleteAction: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'flex-end',
+      paddingHorizontal: 20,
+    },
+    deleteActionText: {
+      color: theme.colors.background,
       fontWeight: '600',
     },
     floatingAddButton: {
