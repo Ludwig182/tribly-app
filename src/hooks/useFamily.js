@@ -4,6 +4,7 @@ import { familyService } from '../services/familyService';
 import { tasksService } from '../services/tasksService';
 import { shoppingService } from '../services/shoppingService';
 import { useAuth } from './useAuth'; // Import direct
+import { notificationsService } from '../services/notificationsService';
 
 const FamilyContext = createContext();
 
@@ -57,6 +58,15 @@ export const FamilyProvider = ({ children }) => {
       }
     }
   }, [familyData, currentMember]);
+
+  // 🔔 Enregistrer la device pour les notifications push
+  useEffect(() => {
+    if (familyId && currentMember) {
+      notificationsService.registerDevice(familyId, currentMember.id).catch(e =>
+        console.warn('Push registration failed', e)
+      );
+    }
+  }, [familyId, currentMember]);
 
   // 🔄 Effet principal pour les données Firebase
   useEffect(() => {
