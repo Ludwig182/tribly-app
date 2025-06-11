@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../theme/useTheme';
 import { useCalendar } from '../../hooks/useCalendar';
 import { useFamily } from '../../hooks/useFamily';
+import { useAuth } from '../../hooks/useAuth';
 import CalendarGrid from './CalendarGrid';
 import WeekView from './WeekView';
 import DayView from './DayView';
@@ -41,6 +42,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
 }) => {
   const theme = useTheme();
   const { familyData } = useFamily();
+  const { isParent } = useAuth();
   const {
     currentDate,
     selectedDate,
@@ -150,6 +152,14 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
     }
   };
 
+  const handleEventComplete = async (eventId: string) => {
+    try {
+      await completeEvent(eventId);
+    } catch (error) {
+      console.error('Erreur lors de la complétion de l\'événement:', error);
+    }
+  };
+
   const renderCalendarView = () => {
     switch (viewMode) {
       case 'week':
@@ -180,6 +190,8 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
             onEventSelect={handleEventSelect}
             onEventCreate={handleEventCreate}
             onEventDelete={handleEventDelete}
+            onEventComplete={handleEventComplete}
+            isParent={isParent}
             currentDate={currentDate}
           />
         );

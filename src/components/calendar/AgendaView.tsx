@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList, Platform } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../theme/useTheme';
@@ -12,6 +12,8 @@ type AgendaViewProps = {
   onEventCreate: (dateWithTime?: Date) => void;
   currentDate: Date;
   onEventDelete: (eventId: string) => void;
+  onEventComplete: (eventId: string) => void;
+  isParent?: boolean;
 };
 
 type EventSection = {
@@ -25,9 +27,12 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   onEventSelect,
   onEventCreate,
   currentDate,
-  onEventDelete
+  onEventDelete,
+  onEventComplete,
+  isParent = false
 }) => {
   const theme = useTheme();
+  const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
   // Grouper les événements par date (en excluant les événements passés)
   const groupEventsByDate = (events: CalendarEvent[]): EventSection[] => {
@@ -103,21 +108,53 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   const renderRightActions = (event: CalendarEvent) => (
     <TouchableOpacity
       style={[styles.deleteAction, { backgroundColor: theme.colors.error }]}
-      onPress={() => onEventDelete(event.id)}
+      onPress={() => {
+        onEventDelete(event.id);
+        swipeableRefs.current[event.id]?.close();
+      }}
     >
       <Text style={styles.deleteActionText}>Supprimer</Text>
     </TouchableOpacity>
   );
 
+  const renderLeftActions = (event: CalendarEvent) => (
+    <TouchableOpacity
+      style={[styles.completeAction, { backgroundColor: theme.colors.success }]}
+      onPress={() => {
+        onEventComplete(event.id);
+        swipeableRefs.current[event.id]?.close();
+      }}
+    >
+      <Text style={styles.completeActionText}>Terminé</Text>
+    </TouchableOpacity>
+  );
+
   const renderEventItem = ({ item }: { item: CalendarEvent }) => (
     <Swipeable
-      renderRightActions={() => renderRightActions(item)}
-      onSwipeableOpen={() => onEventDelete(item.id)}
+      ref={(ref) => { swipeableRefs.current[item.id] = ref; }}
+      renderRightActions={isParent ? () => renderRightActions(item) : undefined}
+      renderLeftActions={
+        isParent && !item.completed ? () => renderLeftActions(item) : undefined
+      }
+      onSwipeableOpen={(direction) => {
+        if (!isParent) return;
+        if (direction === 'right') {
+          onEventDelete(item.id);
+        } else if (direction === 'left' && !item.completed) {
+          onEventComplete(item.id);
+          swipeableRefs.current[item.id]?.close();
+        }
+      }}
     >
       <ModernEventCard
         event={item}
         onEdit={() => onEventSelect(item)}
-        onComplete={() => {/* TODO: Implement complete */}}
+        onComplete={() => {
+          if (isParent && !item.completed) {
+            onEventComplete(item.id);
+            swipeableRefs.current[item.id]?.close();
+          }
+        }}
       />
     </Swipeable>
   );
@@ -202,7 +239,17 @@ const AgendaView: React.FC<AgendaViewProps> = ({
       alignItems: 'flex-end',
       paddingHorizontal: 20,
     },
+    completeAction: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      paddingHorizontal: 20,
+    },
     deleteActionText: {
+      color: theme.colors.background,
+      fontWeight: '600',
+    },
+    completeActionText: {
       color: theme.colors.background,
       fontWeight: '600',
     },
