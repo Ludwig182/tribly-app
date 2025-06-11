@@ -9,6 +9,7 @@ const childTheme: Theme = {
     background: '#FFFFFF',
     text: '#212121',
     accent: '#FFCA28',
+    primaryLight : 'rgba(255, 255, 255, 0.1)',
 
     border: '#E0E0E0',              // Gris clair discret
     textSecondary: '#616161',       // Lisibilité facile (secondaire)

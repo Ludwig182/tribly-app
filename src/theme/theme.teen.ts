@@ -9,6 +9,7 @@ const teenTheme: Theme = {
     background: '#FFFFFF',
     text: '#212121',
     accent: '#4FC3F7',
+    primaryLight : 'rgba(255, 255, 255, 0.1)',
 
     border: '#E0E0E0',              // Gris clair pour les séparateurs
     textSecondary: '#616161',       // Texte secondaire un peu foncé

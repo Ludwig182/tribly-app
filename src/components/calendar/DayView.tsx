@@ -303,8 +303,6 @@ const DayView: React.FC<DayViewProps> = ({
     },
     header: {
       padding: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
       backgroundColor: theme.colors.surface,
     },
     dateText: {
@@ -318,8 +316,6 @@ const DayView: React.FC<DayViewProps> = ({
     },
     allDaySection: {
       backgroundColor: theme.colors.backgroundSecondary,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
       paddingHorizontal: 20,
       paddingVertical: 10,
     },

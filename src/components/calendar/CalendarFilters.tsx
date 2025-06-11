@@ -134,8 +134,6 @@ const CalendarFiltersComponent: React.FC<CalendarFiltersProps> = ({
       justifyContent: 'space-between',
       paddingHorizontal: 16,
       paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
     },
     headerButton: {
       paddingVertical: 8,

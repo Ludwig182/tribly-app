@@ -97,12 +97,12 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 12,
+      marginBottom: 1,
     },
     navigationContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 16,
+      gap: 8,
     },
     agendaContainer: {
       flex: 1,

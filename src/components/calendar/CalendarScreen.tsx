@@ -298,8 +298,6 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
       backgroundColor: theme.colors.surface,
       paddingHorizontal: 20,
       paddingVertical: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.border,
     },
     content: {
     flex: 1,

@@ -9,6 +9,7 @@ const adultTheme: Theme = {
     background: '#FFFFFF',
     text: '#212121',
     accent: '#FF8A80',
+    primaryLight : 'rgba(255, 255, 255, 0.1)',
 
     // 👇 Nouvelles couleurs 👇
     border: '#E0E0E0',
