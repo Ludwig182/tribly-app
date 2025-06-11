@@ -262,6 +262,7 @@ export const calendarService = {
       // Mise à jour
       await this.updateEvent(familyId, eventId, {
         completed: true,
+        status: 'completed',
         completedBy: currentUserId,
         completedAt: new Date()
       });
@@ -294,6 +295,7 @@ export const calendarService = {
       // Mise à jour
       await this.updateEvent(familyId, eventId, {
         completed: false,
+        status: 'pending',
         completedBy: null,
         completedAt: null
       });

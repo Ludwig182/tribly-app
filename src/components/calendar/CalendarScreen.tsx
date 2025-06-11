@@ -150,6 +150,14 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
     }
   };
 
+  const handleEventComplete = async (eventId: string) => {
+    try {
+      await completeEvent(eventId);
+    } catch (error) {
+      console.error('Erreur lors de la complétion de l\'événement:', error);
+    }
+  };
+
   const renderCalendarView = () => {
     switch (viewMode) {
       case 'week':
@@ -180,6 +188,7 @@ const CalendarScreen: React.FC<CalendarScreenProps> = ({
             onEventSelect={handleEventSelect}
             onEventCreate={handleEventCreate}
             onEventDelete={handleEventDelete}
+            onEventComplete={handleEventComplete}
             currentDate={currentDate}
           />
         );

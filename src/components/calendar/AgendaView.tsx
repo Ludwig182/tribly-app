@@ -12,6 +12,7 @@ type AgendaViewProps = {
   onEventCreate: (dateWithTime?: Date) => void;
   currentDate: Date;
   onEventDelete: (eventId: string) => void;
+  onEventComplete: (eventId: string) => void;
 };
 
 type EventSection = {
@@ -25,7 +26,8 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   onEventSelect,
   onEventCreate,
   currentDate,
-  onEventDelete
+  onEventDelete,
+  onEventComplete
 }) => {
   const theme = useTheme();
 
@@ -109,15 +111,31 @@ const AgendaView: React.FC<AgendaViewProps> = ({
     </TouchableOpacity>
   );
 
+  const renderLeftActions = (event: CalendarEvent) => (
+    <TouchableOpacity
+      style={[styles.completeAction, { backgroundColor: theme.colors.success }]}
+      onPress={() => onEventComplete(event.id)}
+    >
+      <Text style={styles.completeActionText}>Terminé</Text>
+    </TouchableOpacity>
+  );
+
   const renderEventItem = ({ item }: { item: CalendarEvent }) => (
     <Swipeable
       renderRightActions={() => renderRightActions(item)}
-      onSwipeableOpen={() => onEventDelete(item.id)}
+      renderLeftActions={() => renderLeftActions(item)}
+      onSwipeableOpen={(direction) => {
+        if (direction === 'right') {
+          onEventDelete(item.id);
+        } else if (direction === 'left') {
+          onEventComplete(item.id);
+        }
+      }}
     >
       <ModernEventCard
         event={item}
         onEdit={() => onEventSelect(item)}
-        onComplete={() => {/* TODO: Implement complete */}}
+        onComplete={() => onEventComplete(item.id)}
       />
     </Swipeable>
   );
@@ -202,7 +220,17 @@ const AgendaView: React.FC<AgendaViewProps> = ({
       alignItems: 'flex-end',
       paddingHorizontal: 20,
     },
+    completeAction: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      paddingHorizontal: 20,
+    },
     deleteActionText: {
+      color: theme.colors.background,
+      fontWeight: '600',
+    },
+    completeActionText: {
       color: theme.colors.background,
       fontWeight: '600',
     },
