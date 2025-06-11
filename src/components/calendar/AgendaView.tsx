@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList, Platform } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../theme/useTheme';
@@ -30,6 +30,16 @@ const AgendaView: React.FC<AgendaViewProps> = ({
   onEventComplete
 }) => {
   const theme = useTheme();
+  const swipeableRefs = useRef(new Map<string, Swipeable | null>());
+
+  const closeSwipeable = (id: string) => {
+    const ref = swipeableRefs.current.get(id);
+    if (ref) {
+      try {
+        ref.close();
+      } catch {}
+    }
+  };
 
   // Grouper les événements par date (en excluant les événements passés)
   const groupEventsByDate = (events: CalendarEvent[]): EventSection[] => {
@@ -122,13 +132,22 @@ const AgendaView: React.FC<AgendaViewProps> = ({
 
   const renderEventItem = ({ item }: { item: CalendarEvent }) => (
     <Swipeable
+      ref={ref => {
+        if (ref) {
+          swipeableRefs.current.set(item.id, ref);
+        } else {
+          swipeableRefs.current.delete(item.id);
+        }
+      }}
       renderRightActions={() => renderRightActions(item)}
-      renderLeftActions={() => renderLeftActions(item)}
-      onSwipeableOpen={(direction) => {
+      renderLeftActions={item.status === 'completed' ? undefined : () => renderLeftActions(item)}
+      onSwipeableOpen={async (direction) => {
         if (direction === 'right') {
-          onEventDelete(item.id);
-        } else if (direction === 'left') {
-          onEventComplete(item.id);
+          await onEventDelete(item.id);
+          closeSwipeable(item.id);
+        } else if (direction === 'left' && item.status !== 'completed') {
+          await onEventComplete(item.id);
+          closeSwipeable(item.id);
         }
       }}
     >
