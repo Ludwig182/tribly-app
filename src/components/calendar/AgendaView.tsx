@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, SectionList, Platform } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../theme/useTheme';
@@ -33,6 +33,15 @@ const AgendaView: React.FC<AgendaViewProps> = ({
 }) => {
   const theme = useTheme();
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
+
+  // Fermer automatiquement les actions ouvertes lorsqu'un événement est marqué comme terminé
+  useEffect(() => {
+    events.forEach(event => {
+      if (event.completed) {
+        swipeableRefs.current[event.id]?.close?.();
+      }
+    });
+  }, [events]);
 
   // Grouper les événements par date (en excluant les événements passés)
   const groupEventsByDate = (events: CalendarEvent[]): EventSection[] => {
